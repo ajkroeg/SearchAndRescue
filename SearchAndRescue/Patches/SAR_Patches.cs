@@ -17,6 +17,7 @@ using UnityEngine.UI;
 using ModState = SearchAndRescue.Framework.ModState;
 using Org.BouncyCastle.Utilities;
 using static SearchAndRescue.Framework.Classes;
+using FluffyUnderware.Curvy.Generator;
 
 namespace SearchAndRescue
 {
@@ -125,11 +126,13 @@ namespace SearchAndRescue
                 if (__result)
                 {
                     var toRemove = "";
+                    var removePilotName = "";
                     foreach (var lostPilotInfo in ModState.LostPilotsInfo)
                     {
                         if (lostPilotInfo.Value.MissingPilotSystem == __instance.TargetSystem)
                         {
                             toRemove = lostPilotInfo.Key;
+                            removePilotName = lostPilotInfo.Value.MissingPilotDef.Description.Callsign;
                             var pilotDef = lostPilotInfo.Value.MissingPilotDef;
                             var biomeTag = $"{GlobalVars.SAR_BiomePrefix}{lostPilotInfo.Value.PilotBiomeSkin}";
                             var systemTag = $"{GlobalVars.SAR_SystemPrefix}{lostPilotInfo.Value.MissingPilotSystem}";
@@ -139,6 +142,11 @@ namespace SearchAndRescue
                             pilotDef.PilotTags.Add(pilotUIDTag);
                             var pilotSon = pilotDef.ToJSON();
                             var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
+                            pilotDef.SetRecentInjuryDamageType(DamageType.Unknown);
+                            pilotDef.SetDiedInSystemID(lostPilotInfo.Value.MissingPilotSystem);
+                            var pilot = new Pilot(pilotDef, lostPilotInfo.Value.PilotSimUID, true);
+                            sim.Graveyard.Add(pilot);
+
                             ModInit.modLog?.Info?.Write($"[Contract_OnDayPassed] - created tag for removal from company.");
                             sim.CompanyTags.Remove(pilotTag);
                             break;
@@ -146,6 +154,11 @@ namespace SearchAndRescue
                     }
                     ModState.LostPilotsInfo.Remove(toRemove);
                     ModInit.modLog?.Info?.Write($"[Contract_OnDayPassed] - removed {toRemove} from missing pilot state.");
+
+                    Traverse.Create(__instance).Field("interruptQueue").GetValue<SimGameInterruptManager>()
+                        .QueuePauseNotification("Pilot Rescue EXPIRED", $"The window for recovery has passed for {removePilotName}. Another name for the wall.",
+                            sim.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
+
                 }
             }
         }
@@ -171,6 +184,18 @@ namespace SearchAndRescue
                                 ModInit.modLog?.Info?.Write(
                                     $"[SimGameState_ResolveCompleteContract] - adding pilot {pilot.Callsign} to roster from recovery.");
                             }
+                            else
+                            {
+                                var pilotSon = pilot.pilotDef.ToJSON();
+                                var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
+                                pilot.pilotDef.SetRecentInjuryDamageType(DamageType.Unknown);
+                                pilot.pilotDef.SetDiedInSystemID(lostPilotInfo.Value.MissingPilotSystem);
+                                __instance.Graveyard.Add(pilot);
+                                ModInit.modLog?.Info?.Write($"[Contract_OnDayPassed] - created tag for removal from company.");
+                                __instance.CompanyTags.Remove(pilotTag);
+                            }
+
+
                             toRemove.Add(pilot.pilotDef.Description.Id);
                             break; // break; only one recover per contract
                         }
