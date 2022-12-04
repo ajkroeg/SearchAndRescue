@@ -2,7 +2,7 @@
 
 **Depends On IRBTModUtils and MapRandomizer!**
 
-This mod expands the consequences for the player's ejected pilots. On ejection, the unit makes a saving roll. On a success, the pilot is recovered normally. On failure, the pilot is listed as MIA and a Search And Rescue mission is added to the list of available contracts. This mod also enables the unused `usesExpiration` and `expirationTimeOverride` for ContractOverrides, and by default the SAR Missions will expire (disappear) after 14 days.
+This mod expands the consequences for the player's ejected pilots. On ejection, the unit makes a saving roll. On a success, the pilot is recovered normally. On failure, the pilot is listed as MIA and a Search And Rescue mission is added to the list of available contracts. This mod also enables the unused `usesExpiration` and `expirationTimeOverride` for ContractOverrides, and by default the SAR Missions will expire (disappear) after 14 days, and the missing pilot will be added to the death wall.
 
 mod.json settings follow:
 ```
@@ -31,4 +31,4 @@ mod.json settings follow:
 
 ### So how does it work?
 
-On ejection, pilot will make a roll against `BasePilotRecoveryChance` x unit statistic (float) `SAR_RecoveryChanceMult`. On success, pilot is recovered, on failure, pilot is listed as MIA (pilot is dismissed from the company; their current pilotDef (including xp earned, abilities leveled, etc) is serialized. A recovery mission is added to command center. By default these missions expire after 14 days. On accepting and completing the recovery mission, the pilot is recovered, and is restored to the player roster.
+On ejection, pilot will make a roll against `BasePilotRecoveryChance` x unit statistic (float) `SAR_RecoveryChanceMult`. On success, pilot is recovered, on failure, pilot is listed as MIA (pilot is dismissed from the company; their current pilotDef (including xp earned, abilities leveled, etc) is serialized. A recovery mission is added to command center. By default these missions expire after 14 days. On accepting and completing the recovery mission, the pilot is recovered, and is restored to the player roster. If the player fails the recovery mission, or if time expires, the missing pilot is no longer recoverable and is added to the death wall. 
