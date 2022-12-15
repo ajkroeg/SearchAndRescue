@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BattleTech.Framework;
 using BattleTech.Save;
 using BattleTech.Save.Test;
 using BattleTech.UI;
@@ -18,6 +19,7 @@ using ModState = SearchAndRescue.Framework.ModState;
 using Org.BouncyCastle.Utilities;
 using static SearchAndRescue.Framework.Classes;
 using FluffyUnderware.Curvy.Generator;
+using SimGameState = BattleTech.SimGameState;
 
 namespace SearchAndRescue
 {
@@ -40,7 +42,7 @@ namespace SearchAndRescue
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
                 if (ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract.Override.ID) || ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract.Override.ContractTypeValue.Name)) return;
-                var pilotDef = __instance.GetPilot().pilotDef;
+                var pilotDef = __instance.GetPilot().ToPilotDef(true);
                 if (sim.PilotRoster.Any(x=>x.pilotDef.Description.Id == pilotDef.Description.Id))
                 {
                     if (!__instance.IsPilotRecovered())
@@ -93,17 +95,46 @@ namespace SearchAndRescue
                     __instance.GetTeamFaction("be77cadd-e245-4240-a93e-b99cc98902a5");
                 ModInit.modLog?.Info?.Write(
                     $"[Contract_CompleteContract] - dump lost pilots: keys: {string.Join(", ", ModState.LostPilotsInfo.Keys)}\n{string.Join(", ", ModState.LostPilotsInfo.Values)}" );
+                
+                var potentialContracts = new List<string>();
+
+                sim.GetDifficultyRangeForContractPublic(sim.CurSystem, out int minDiff, out int maxDiff);
+
+                foreach (var cid in ModInit.modSettings.RecoveryContractIDs)
+                {
+                    var tempOverride = sim.DataManager.ContractOverrides.Get(cid);
+                    if (tempOverride != null)
+                    {
+                        if (tempOverride.difficulty <= maxDiff && tempOverride.difficulty >= minDiff)
+                        {
+                            potentialContracts.Add(cid);
+                        }
+                    }
+                }
+
                 foreach (UnitResult unitResult in __instance.PlayerUnitResults)
                 {
                     if (ModState.LostPilotsInfo.ContainsKey(unitResult.pilot.Description.Id))
                     {
                         biomes.Add(ModState.LostPilotsInfo[unitResult.pilot.pilotDef.Description.Id].PilotBiomeSkin);
-
-                        var contractData = new SimGameState.AddContractData();
-                        contractData.ContractName = ModInit.modSettings.RecoveryContractIDs.GetRandomElement();
-                        contractData.Employer = "SelfEmployed";
-                        contractData.Target = targetFaction.Name;
-                        contractData.TargetSystem = sim.CurSystem.Def.CoreSystemID;
+                        string contractName;
+                        if (potentialContracts.Count > 0)
+                        {
+                            contractName = potentialContracts.GetRandomElement();
+                            ModInit.modLog?.Trace?.Write($"[Contract_CompleteContract]: selected {contractName} from difficulty-appropriate contracts. hopefully.");
+                        }
+                        else
+                        {
+                            contractName = ModInit.modSettings.RecoveryContractIDs.GetRandomElement();
+                            ModInit.modLog?.Trace?.Write($"[Contract_CompleteContract]: selected {contractName} from all potential bc we couldnt find anything with right difficulty.");
+                        }
+                        var contractData = new SimGameState.AddContractData
+                        {
+                            ContractName = contractName,
+                            Employer = "SelfEmployed",
+                            Target = targetFaction.Name,
+                            TargetSystem = sim.CurSystem.Def.CoreSystemID
+                        };
                         MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                         sim.AddContract(contractData);
                         MapRandomizer.ModState.IsSystemActionPatch = null;
@@ -128,25 +159,27 @@ namespace SearchAndRescue
                         if (lostPilotInfo.Value.MissingPilotSystem == __instance.CurSystem.ID)
                         {
                             var pilotInfo = lostPilotInfo.Value;
+                            pilotInfo.MissingPilotDef.DataManager = __instance.DataManager;
                             var pilot = new Pilot(pilotInfo.MissingPilotDef, pilotInfo.PilotSimUID, true);
+                            var pilotSon = pilot.pilotDef.ToJSON();
+                            var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
                             if (__instance.CompletedContract.State == Contract.ContractState.Complete)
                             {
+                                pilot.ForceRefreshDef();
                                 __instance.AddRecoveredPilotToRoster(pilot);
+                                
                                 ModInit.modLog?.Info?.Write(
                                     $"[SimGameState_ResolveCompleteContract] - adding pilot {pilot.Callsign} to roster from recovery.");
                             }
                             else
                             {
-                                var pilotSon = pilot.pilotDef.ToJSON();
-                                var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
                                 pilot.pilotDef.SetRecentInjuryDamageType(DamageType.Unknown);
                                 pilot.pilotDef.SetDiedInSystemID(lostPilotInfo.Value.MissingPilotSystem);
                                 __instance.Graveyard.Add(pilot);
                                 ModInit.modLog?.Info?.Write($"[Contract_OnDayPassed] - created tag for removal from company.");
-                                __instance.CompanyTags.Remove(pilotTag);
                             }
 
-
+                            __instance.CompanyTags.Remove(pilotTag);
                             toRemove.Add(pilot.pilotDef.Description.Id);
                             break; // break; only one recover per contract
                         }

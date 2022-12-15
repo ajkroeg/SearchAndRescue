@@ -15,6 +15,8 @@ using BattleTech.StringInterpolation;
 using Harmony;
 using IRBTModUtils;
 using SearchAndRescue.Framework;
+using UnityEngine;
+using static BattleTech.SimGameState;
 using ModState = SearchAndRescue.Framework.ModState;
 
 namespace SearchAndRescue
@@ -150,9 +152,11 @@ namespace SearchAndRescue
 
         public static void AddRecoveredPilotToRoster(this SimGameState sim, Pilot pilot)
         {
-            DataManager.InjectedDependencyLoadRequest injectedDependencyLoadRequest = new DataManager.InjectedDependencyLoadRequest(sim.DataManager);
-            pilot.pilotDef.GatherDependencies(sim.DataManager, injectedDependencyLoadRequest, 1000U);
-
+//            DataManager.InjectedDependencyLoadRequest injectedDependencyLoadRequest = new DataManager.InjectedDependencyLoadRequest(sim.DataManager);
+//            pilot.pilotDef.GatherDependencies(sim.DataManager, injectedDependencyLoadRequest, 1000U);
+            pilot.FromPilotDef(pilot.pilotDef);
+//            pilot.Hydrate(null, null);
+//            pilot.SimGameInitFromSave();
             sim.PilotRoster.Add(pilot, 0);
             if (!string.IsNullOrEmpty(pilot.pilotDef.Description.Icon))
             {
@@ -160,9 +164,9 @@ namespace SearchAndRescue
                 loadRequest.AddBlindLoadRequest(BattleTechResourceType.Sprite, pilot.pilotDef.Description.Icon, new bool?(false));
                 loadRequest.ProcessRequests(10U);
             }
-            else if (pilot.pilotDef.PortraitSettings != null)
+            else
             {
-                pilot.pilotDef.PortraitSettings.RenderPortrait(sim.DataManager, null, Array.Empty<PortraitManager.PortraitSizes>());
+                pilot.pilotDef.PortraitSettings?.RenderPortrait(sim.DataManager, null, Array.Empty<PortraitManager.PortraitSizes>());
             }
         }
 
@@ -186,6 +190,26 @@ namespace SearchAndRescue
                 factionValue = FactionEnumeration.GetFactionByName(factionID);
             }
             return factionValue;
+        }
+
+        public static ContractDifficulty GetDifficultyEnumFromValue(int value)
+        {
+            if (value >= 7)
+            {
+                return ContractDifficulty.Hard;
+            }
+            if (value >= 4)
+            {
+                return ContractDifficulty.Medium;
+            }
+            return ContractDifficulty.Easy;
+        }
+        public static void GetDifficultyRangeForContractPublic(this SimGameState sim, StarSystem system, out int minDiff, out int maxDiff)
+        {
+            int baseDiff = system.Def.GetDifficulty(sim.SimGameMode) + Mathf.FloorToInt(sim.GlobalDifficulty);
+            int contractDifficultyVariance = sim.Constants.Story.ContractDifficultyVariance;
+            minDiff = Mathf.Max(1, baseDiff - contractDifficultyVariance);
+            maxDiff = Mathf.Max(1, baseDiff + contractDifficultyVariance);
         }
     }
 }
