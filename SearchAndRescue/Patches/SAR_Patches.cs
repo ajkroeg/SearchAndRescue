@@ -30,7 +30,8 @@ namespace SearchAndRescue
         {
             public static void Postfix(AbstractActor __instance)
             {
-                __instance.StatCollection.AddStatistic<float>("SAR_RecoveryChanceMult", 1f);
+                __instance.StatCollection.AddStatistic<float>(GlobalVars.SAR_RecoveryChanceStat, 1f);
+                __instance.StatCollection.AddStatistic<float>(GlobalVars.SAR_InjuryChanceStat, 1f);
             }
         }
 
@@ -45,6 +46,12 @@ namespace SearchAndRescue
                 var pilotDef = __instance.GetPilot().ToPilotDef(true);
                 if (sim.PilotRoster.Any(x=>x.pilotDef.Description.Id == pilotDef.Description.Id))
                 {
+                    if (__instance.IsPilotInjured())
+                    {
+                        //var bonusHealth = __instance.GetPilot().BonusHealth;
+
+                        __instance.GetPilot().InjurePilot(sourceID, stackItemID, 1, DamageType.HeadShot, null, __instance);
+                    }
                     if (!__instance.IsPilotRecovered())
                     {
                         ModState.CompleteContractRunOnce = false;

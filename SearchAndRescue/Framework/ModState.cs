@@ -16,6 +16,8 @@ namespace SearchAndRescue.Framework
         public const string SAR_PilotSimUIDPrefix = "SAR_PilotSimUID_";
         public const string SAR_BiomePrefix = "SAR_BIOME_";
         public const string SAR_SystemPrefix = "SAR_SYSTEM_";
+        public const string SAR_RecoveryChanceStat = "SAR_RecoveryChanceMult";
+        public const string SAR_InjuryChanceStat = "SAR_InjuryChanceMult";
     }
     public static class ModState
     {

@@ -13,6 +13,14 @@ namespace SearchAndRescue.Framework
 {
     public class Classes
     {
+        public class WorkOrderEntry_Notification_Timed : WorkOrderEntry
+        {
+            public WorkOrderEntry_Notification_Timed(string ID, string Description, int baseCost, string ToastDescription = "")
+                : base(WorkOrderType.NotificationGeneric, ID, Description, baseCost, ToastDescription, 0)
+            {
+            }
+        }
+
         public class AddRecoveryContractRequest
         {
             public SimGameState Sim;

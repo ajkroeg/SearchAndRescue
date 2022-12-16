@@ -14,6 +14,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using SearchAndRescue.Framework;
 using System.Diagnostics.Contracts;
+using BattleTech.Serialization.Handlers;
 using Contract = BattleTech.Contract;
 
 namespace SearchAndRescue.Patches
@@ -91,7 +92,7 @@ namespace SearchAndRescue.Patches
                     Traverse.Create(sim).Field("interruptQueue").GetValue<SimGameInterruptManager>()
                         .QueuePauseNotification("Pilot Rescue EXPIRED", $"The window for recovery has passed for {removePilotName}. Another name for the wall.",
                             sim.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
-                    return;
+ //                   return;
                 }
                 var listedContracts = Traverse.Create(contractWidget).Field("listedContracts").GetValue<List<SGContractsListItem>>();
                 foreach (var contractElement in listedContracts)
@@ -156,7 +157,24 @@ namespace SearchAndRescue.Patches
                     tooltipComponent.SetDefaultStateData(TooltipUtilities.GetStateDataFromObject(def));
                     ___expirationElement = timeLimitIcon;
                     ___expirationElement.gameObject.SetActive(true);
+
+
+                    //add work order entry?
+ //                   var entry = new Classes.WorkOrderEntry_Notification_Timed($"{contract.Override.ID}_TimeLeft", $"Time-limited contract!", contract.ExpirationTime);
+ //                   sim.RoomManager.AddWorkQueueEntry(entry);
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(TaskTimelineWidget), "AddEntry", new Type[] {typeof(WorkOrderEntry), typeof(bool)})]
+        public static class TaskTimelineWidget_AddEntry
+        {
+            static bool Prepare() => true;
+            public static bool Prefix(TaskTimelineWidget __instance, WorkOrderEntry entry, Dictionary<WorkOrderEntry, TaskManagementElement> ___ActiveItems, bool sortEntries = true)
+            {
+                if (___ActiveItems.Keys.All(x => x is Classes.WorkOrderEntry_Notification_Timed && x.ID == entry.ID))
+                    return false;
+                return true;
             }
         }
     }

@@ -139,7 +139,11 @@ namespace SearchAndRescue
 
         public static float getSAR_RecoveryChanceMult(this AbstractActor actor)
         {
-            return actor.StatCollection.GetValue<float>("SAR_RecoveryChanceMult");
+            return actor.StatCollection.GetValue<float>(GlobalVars.SAR_RecoveryChanceStat);
+        }
+        public static float getSAR_InjureChanceMult(this AbstractActor actor)
+        {
+            return actor.StatCollection.GetValue<float>(GlobalVars.SAR_InjuryChanceStat);
         }
         public static bool IsPilotRecovered(this AbstractActor actor)
         {
@@ -147,6 +151,15 @@ namespace SearchAndRescue
             var chance = ModInit.modSettings.BasePilotRecoveryChance * actor.getSAR_RecoveryChanceMult();
             var roll = ModInit.Random.NextDouble();
             ModInit.modLog?.Info?.Write($"[IsPilotRecovered] - {actor.GetPilot().Callsign} Pilot recovery roll {roll} vs chance {chance}. Success? {roll <= chance}.");
+            return roll <= chance;
+        }
+
+        public static bool IsPilotInjured(this AbstractActor actor)
+        {
+            //if (actor.GetPilot().IsPlayerCharacter) return false;
+            var chance = ModInit.modSettings.InjureOnEjectChance * actor.getSAR_InjureChanceMult();
+            var roll = ModInit.Random.NextDouble();
+            ModInit.modLog?.Info?.Write($"[IsPilotInjured] - {actor.GetPilot().Callsign} Pilot injury roll {roll} vs chance {chance}. Success? {roll <= chance}.");
             return roll <= chance;
         }
 
