@@ -54,7 +54,7 @@ namespace SearchAndRescue.Patches
             {
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
-                var contractWidget = Traverse.Create(sim.RoomManager.CmdCenterRoom).Field("contractsWidget").GetValue<SGContractsWidget>();
+                var contractWidget = sim.RoomManager.CmdCenterRoom.contractsWidget;//Traverse.Create(sim.RoomManager.CmdCenterRoom).Field("contractsWidget").GetValue<SGContractsWidget>();
                 if (__result)
                 {
                     var toRemove = "";
@@ -89,18 +89,17 @@ namespace SearchAndRescue.Patches
 
                     contractWidget.ListContracts(sim.GetAllCurrentlySelectableContracts(false), null);
 
-                    Traverse.Create(sim).Field("interruptQueue").GetValue<SimGameInterruptManager>()
-                        .QueuePauseNotification("Pilot Rescue EXPIRED", $"The window for recovery has passed for {removePilotName}. Another name for the wall.",
+                    sim.interruptQueue.QueuePauseNotification("Pilot Rescue EXPIRED", $"The window for recovery has passed for {removePilotName}. Another name for the wall.",
                             sim.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
  //                   return;
                 }
-                var listedContracts = Traverse.Create(contractWidget).Field("listedContracts").GetValue<List<SGContractsListItem>>();
+
+                var listedContracts = contractWidget.listedContracts;//Traverse.Create(contractWidget).Field("listedContracts").GetValue<List<SGContractsListItem>>();
                 foreach (var contractElement in listedContracts)
                 {
                     if (__instance.UsingExpiration)
                     {
-                        var expirationElement = Traverse.Create(contractElement).Field("expirationElement")
-                            .GetValue<GameObject>();
+                        var expirationElement = contractElement.expirationElement;//Traverse.Create(contractElement).Field("expirationElement").GetValue<GameObject>();
                         if (expirationElement != null)
                         {
                             var tooltipComponent = expirationElement.gameObject.GetComponent<HBSTooltip>();
@@ -132,16 +131,16 @@ namespace SearchAndRescue.Patches
         [HarmonyPatch(typeof(SGContractsListItem), "Init", new Type[]{ typeof(Contract), typeof(SimGameState)})]
         public static class SGContractsListItem_Postfix
         {
-            public static void Postfix(SGContractsListItem __instance, Contract contract, SimGameState sim, GameObject ___travelIndicator, ref GameObject ___expirationElement)
+            public static void Postfix(SGContractsListItem __instance, Contract contract, SimGameState sim)
             {
-                if (contract.UsingExpiration && ___expirationElement == null)
+                if (contract.UsingExpiration && __instance.expirationElement == null)
 
                 {
                     var timeLimitIcon =
-                        UnityEngine.Object.Instantiate<GameObject>(___travelIndicator,
-                            ___travelIndicator.transform.parent);
+                        UnityEngine.Object.Instantiate<GameObject>(__instance.travelIndicator,
+                            __instance.travelIndicator.transform.parent);
                     var timeLimitRect = timeLimitIcon.gameObject.GetComponent<RectTransform>();
-                    timeLimitRect.anchoredPosition = ___travelIndicator.activeSelf
+                    timeLimitRect.anchoredPosition = __instance.travelIndicator.activeSelf
                         ? new Vector2(-50f, -8.5f)
                         : new Vector2(-20f, -8.5f);
 
@@ -155,8 +154,8 @@ namespace SearchAndRescue.Patches
                     var details = $"This contract will expire in {contract.ExpirationTime} days!";
                     BaseDescriptionDef def = new BaseDescriptionDef("ContractExpirationData", title, details, null);
                     tooltipComponent.SetDefaultStateData(TooltipUtilities.GetStateDataFromObject(def));
-                    ___expirationElement = timeLimitIcon;
-                    ___expirationElement.gameObject.SetActive(true);
+                    __instance.expirationElement = timeLimitIcon;
+                    __instance.expirationElement.gameObject.SetActive(true);
 
 
                     //add work order entry?
@@ -170,9 +169,9 @@ namespace SearchAndRescue.Patches
         public static class TaskTimelineWidget_AddEntry
         {
             static bool Prepare() => true;
-            public static bool Prefix(TaskTimelineWidget __instance, WorkOrderEntry entry, Dictionary<WorkOrderEntry, TaskManagementElement> ___ActiveItems, bool sortEntries = true)
+            public static bool Prefix(TaskTimelineWidget __instance, WorkOrderEntry entry, bool sortEntries = true)
             {
-                if (___ActiveItems.Keys.All(x => x is Classes.WorkOrderEntry_Notification_Timed && x.ID == entry.ID))
+                if (__instance.ActiveItems.Keys.All(x => x is Classes.WorkOrderEntry_Notification_Timed && x.ID == entry.ID))
                     return false;
                 return true;
             }

@@ -66,21 +66,21 @@ namespace SearchAndRescue
         [HarmonyPatch(typeof(AAR_UnitStatusWidget), "FillInPilotData")]
         public static class AAR_UnitStatusWidget_FillInPilotData
         {
-            public static void Postfix(AAR_UnitStatusWidget __instance, int xpEarned, UnitResult ___UnitData, ref GameObject ___SimGamePilotDataOverlay)
+            public static void Postfix(AAR_UnitStatusWidget __instance, int xpEarned)
             {
-                if (ModState.LostPilotsInfo.ContainsKey(___UnitData.pilot.pilotDef.Description.Id))
+                if (ModState.LostPilotsInfo.ContainsKey(__instance.UnitData.pilot.pilotDef.Description.Id))
                 {
                    
                     //no . doi sim pilot overlay,injuries horiz layout group,lopcalizable text
 
                     var injuryGroupComponent =
-                        ___SimGamePilotDataOverlay.gameObject.GetComponentInChildren<HorizontalLayoutGroup>();
+                        __instance.SimGamePilotDataOverlay.gameObject.GetComponentInChildren<HorizontalLayoutGroup>();
                     if (injuryGroupComponent != null)
                     {
                         var localizeText = injuryGroupComponent.gameObject.GetComponentInChildren<LocalizableText>();
                         localizeText.SetText("MISSING IN ACTION");
                     }
-                    ___SimGamePilotDataOverlay.SetActive(true);
+                    __instance.SimGamePilotDataOverlay.SetActive(true);
 
                 }
             }
@@ -216,8 +216,7 @@ namespace SearchAndRescue
 
                                 // what do with pilots? if set "away", theyll still get pulled for events and shit. just dismiss them, save info, and add back.
                                 __instance.DismissMissingPilot(simPilot);
-                                Traverse.Create(__instance).Field("interruptQueue").GetValue<SimGameInterruptManager>()
-                                    .QueuePauseNotification("Pilot MIA!", $"Although we saw them eject, we were unable to locate {unitResult.pilot.Callsign}'s ejection seat. An SAR mission has been added to the command center.",
+                                __instance.interruptQueue.QueuePauseNotification("Pilot MIA!", $"Although we saw them eject, we were unable to locate {unitResult.pilot.Callsign}'s ejection seat. An SAR mission has been added to the command center.",
                                         __instance.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
                             }
                         }
