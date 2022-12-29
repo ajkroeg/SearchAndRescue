@@ -56,7 +56,7 @@ namespace SearchAndRescue
                     {
                         ModState.CompleteContractRunOnce = false;
                         var biome = __instance.Combat.ActiveContract.ContractBiome;
-                        var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, __instance.GetPilot().GUID, sim.CurSystem.ID, biome);
+                        var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, __instance.GetPilot().GUID, sim.CurSystem.ID, biome, true);
                         ModState.LostPilotsInfo.Add(pilotDef.Description.Id, missingPilotInfo);
                     }
                 }
@@ -82,6 +82,25 @@ namespace SearchAndRescue
                     }
                     __instance.SimGamePilotDataOverlay.SetActive(true);
 
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(AAR_ContractObjectivesWidget), "FillInObjectives")]
+        public static class AAR_ContractObjectivesWidget_FillInObjectives_Patch
+        {
+            public static void Postfix(AAR_ContractObjectivesWidget __instance)
+            {
+                if (__instance.simState == null) return;
+
+                foreach (var missingPilot in ModState.LostPilotsInfo)
+                {
+                    if (!missingPilot.Value.CurrentContract) continue;
+                    var cmdUseCost = $"{missingPilot.Value.MissingPilotDef.Description.Callsign} Missing In Action! Complete rescue mission to recover.";
+
+                    var cmdUseCostResult = new MissionObjectiveResult($"{cmdUseCost}", Guid.NewGuid().ToString(), false, true, ObjectiveStatus.Ignored, false);
+                    __instance.AddObjective(cmdUseCostResult);
+                    missingPilot.Value.CurrentContract = false;
                 }
             }
         }

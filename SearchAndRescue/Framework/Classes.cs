@@ -191,6 +191,7 @@ namespace SearchAndRescue.Framework
             public string PilotSimUID;
             public string MissingPilotSystem;
             public Biome.BIOMESKIN PilotBiomeSkin;
+            public bool CurrentContract = false;
 
             public MissingPilotInfo()
             {
@@ -198,14 +199,16 @@ namespace SearchAndRescue.Framework
                 PilotSimUID = "";
                 MissingPilotSystem = null;
                 PilotBiomeSkin = Biome.BIOMESKIN.UNDEFINED;
+                CurrentContract = false;
             }
 
-            public MissingPilotInfo(PilotDef missingPilotDef, string pilotSimUID, string missingPilotSystem, Biome.BIOMESKIN pilotBiomeSkin)
+            public MissingPilotInfo(PilotDef missingPilotDef, string pilotSimUID, string missingPilotSystem, Biome.BIOMESKIN pilotBiomeSkin, bool currentContract)
             {
                 MissingPilotDef = missingPilotDef;
                 PilotSimUID = pilotSimUID;
                 MissingPilotSystem = missingPilotSystem;
                 PilotBiomeSkin = pilotBiomeSkin;
+                CurrentContract = currentContract;
             }
         }
     }

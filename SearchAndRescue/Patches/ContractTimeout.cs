@@ -16,6 +16,7 @@ using SearchAndRescue.Framework;
 using System.Diagnostics.Contracts;
 using BattleTech.Serialization.Handlers;
 using Contract = BattleTech.Contract;
+using System.Reflection.Emit;
 
 namespace SearchAndRescue.Patches
 {
@@ -84,20 +85,24 @@ namespace SearchAndRescue.Patches
                             break;
                         }
                     }
-                    ModState.LostPilotsInfo.Remove(toRemove);
+                    ModState.LostPilotsInfo.Remove(toRemove);//what happens if more than one pilot contract expires?
                     ModInit.modLog?.Info?.Write($"[Contract_OnDayPassed] - removed {toRemove} from missing pilot state.");
 
                     contractWidget.ListContracts(sim.GetAllCurrentlySelectableContracts(false), null);
 
-                    sim.interruptQueue.QueuePauseNotification("Pilot Rescue EXPIRED", $"The window for recovery has passed for {removePilotName}. Another name for the wall.",
+                    if (!string.IsNullOrEmpty(toRemove) && toRemove == removePilotName)
+                    {
+                        sim.interruptQueue.QueuePauseNotification("Pilot Rescue EXPIRED", $"The window for recovery has passed for {removePilotName}. Another name for the wall.",
                             sim.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
- //                   return;
+                        //                   return;
+                    }
                 }
 
                 var listedContracts = contractWidget.listedContracts;//Traverse.Create(contractWidget).Field("listedContracts").GetValue<List<SGContractsListItem>>();
+                var timelineWidget = sim.RoomManager.timelineWidget;
                 foreach (var contractElement in listedContracts)
                 {
-                    if (__instance.UsingExpiration)
+                    if (__instance == contractElement.Contract && contractElement.Contract.UsingExpiration)
                     {
                         var expirationElement = contractElement.expirationElement;//Traverse.Create(contractElement).Field("expirationElement").GetValue<GameObject>();
                         if (expirationElement != null)
@@ -110,6 +115,19 @@ namespace SearchAndRescue.Patches
                             tooltipComponent.SetDefaultStateData(TooltipUtilities.GetStateDataFromObject(def));
                             expirationElement.gameObject.SetActive(true);
                         }
+
+                        foreach (var entry in sim.RoomManager.timelineWidget.ActiveItems)
+                        {
+                            if (entry.Key is Classes.WorkOrderEntry_Notification_Timed timed &&
+                                entry.Key.ID == $"{__instance.Override.ID}_TimeLeft")
+                            {
+                                timed.PayCost(1);
+                                if (timed.IsCostPaid())
+                                {
+                                    sim.RoomManager.RemoveWorkQueueEntry(entry.Key);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -121,9 +139,14 @@ namespace SearchAndRescue.Patches
         {
             public static void Postfix(Contract __instance, string mapName, string mapPath, string encounterLayerGuid, ContractTypeValue contractTypeValue, GameInstance game, ContractOverride contractOverride, GameContext baseContext, bool fromSim = false, int difficulty = -1, int initialContractValue = 0, int? playerOneMoraleOverride = null)
             {
+                var sim = UnityGameInstance.BattleTechGame.Simulation;
+                if (sim == null) return;
                 if (contractOverride.usesExpiration && contractOverride.expirationTimeOverride > 0)
                 {
                     __instance.SetExpiration(contractOverride.expirationTimeOverride);
+
+                    //var entry = new Classes.WorkOrderEntry_Notification_Timed($"{contractOverride.ID}_TimeLeft", $"Time-limited contract!", __instance.ExpirationTime);
+                    //sim.RoomManager.AddWorkQueueEntry(entry); //probably need to patch TaskTimelineWidget/RefreshEntries
                 }
             }
         }
@@ -156,11 +179,6 @@ namespace SearchAndRescue.Patches
                     tooltipComponent.SetDefaultStateData(TooltipUtilities.GetStateDataFromObject(def));
                     __instance.expirationElement = timeLimitIcon;
                     __instance.expirationElement.gameObject.SetActive(true);
-
-
-                    //add work order entry?
- //                   var entry = new Classes.WorkOrderEntry_Notification_Timed($"{contract.Override.ID}_TimeLeft", $"Time-limited contract!", contract.ExpirationTime);
- //                   sim.RoomManager.AddWorkQueueEntry(entry);
                 }
             }
         }
@@ -168,12 +186,77 @@ namespace SearchAndRescue.Patches
         [HarmonyPatch(typeof(TaskTimelineWidget), "AddEntry", new Type[] {typeof(WorkOrderEntry), typeof(bool)})]
         public static class TaskTimelineWidget_AddEntry
         {
-            static bool Prepare() => true;
+            static bool Prepare() => false; //fuckit
             public static bool Prefix(TaskTimelineWidget __instance, WorkOrderEntry entry, bool sortEntries = true)
             {
-                if (__instance.ActiveItems.Keys.All(x => x is Classes.WorkOrderEntry_Notification_Timed && x.ID == entry.ID))
+                if (__instance.ActiveItems.Keys.Any(x => x is Classes.WorkOrderEntry_Notification_Timed && x.ID == entry.ID))
                     return false;
                 return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(TaskTimelineWidget), "RefreshEntries", new Type[] {})]
+        public static class TaskTimelineWidget_RefreshEntries
+        {
+            static bool Prepare() => false; //fuckit
+
+            public static bool Prefix(TaskTimelineWidget __instance)
+            {
+                foreach (WorkOrderEntry workOrderEntry in new List<WorkOrderEntry>(__instance.ActiveItems.Keys))
+                {
+                    if (workOrderEntry is Classes.WorkOrderEntry_Notification_Timed) continue; //keep from removing
+                    if (!__instance.Sim.MechLabQueue.Contains(workOrderEntry) && __instance.Sim.TravelOrder != workOrderEntry && !__instance.Sim.MedBayQueue.SubEntries.Contains(workOrderEntry) && __instance.Sim.FinancialReportNotification != workOrderEntry && __instance.Sim.CurrentUpgradeEntry != workOrderEntry)
+                    {
+                        __instance.RemoveEntry(workOrderEntry, false);
+                    }
+                }
+                int num = 0;
+                for (int i = 0; i < __instance.Sim.MechLabQueue.Count; i++) 
+                {
+                    WorkOrderEntry workOrderEntry2 = __instance.Sim.MechLabQueue[i];
+                    if (__instance.ActiveItems.TryGetValue(workOrderEntry2, out var taskManagementElement))
+                    {
+                        if (__instance.Sim.WorkOrderIsMechTech(workOrderEntry2.Type))
+                        {
+                            num = taskManagementElement.UpdateItem(num);
+                        }
+                        else
+                        {
+                            taskManagementElement.UpdateItem(0);
+                        }
+                    }
+                }
+                for (int j = 0; j < __instance.Sim.MedBayQueue.SubEntryCount; j++)
+                {
+                    WorkOrderEntry workOrderEntry3 = __instance.Sim.MedBayQueue.SubEntries[j];
+                    TaskManagementElement taskManagementElement2 = null;
+                    if (__instance.ActiveItems.TryGetValue(workOrderEntry3, out taskManagementElement2))
+                    {
+                        taskManagementElement2.UpdateItem(0);
+                    }
+                }
+                if (__instance.Sim.FinancialReportNotification != null)
+                {
+                    TaskManagementElement taskManagementElement3 = null;
+                    if (__instance.ActiveItems.TryGetValue(__instance.Sim.FinancialReportNotification, out taskManagementElement3))
+                    {
+                        taskManagementElement3.UpdateItem(0);
+                    }
+                    else
+                    {
+                        __instance.Sim.FinancialReportItem = __instance.AddEntry(__instance.Sim.FinancialReportNotification, false);
+                    }
+                }
+                if (__instance.Sim.CurrentUpgradeEntry != null)
+                {
+                    TaskManagementElement taskManagementElement4 = null;
+                    if (__instance.ActiveItems.TryGetValue(__instance.Sim.CurrentUpgradeEntry, out taskManagementElement4))
+                    {
+                        taskManagementElement4.UpdateItem(0);
+                    }
+                }
+                __instance.SortEntries();
+                return false;
             }
         }
     }

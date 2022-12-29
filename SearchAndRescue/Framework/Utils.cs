@@ -115,7 +115,7 @@ namespace SearchAndRescue
                     {
                         ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - ERROR on deserialize. Null simUID {string.IsNullOrEmpty(simUID)}, system {string.IsNullOrEmpty(systemTag)}, or undefined biome {biomeSkin == Biome.BIOMESKIN.UNDEFINED}.");
                     }
-                    var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, simUID, systemTag, biomeSkin);
+                    var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, simUID, systemTag, biomeSkin, false);
                     if (ModState.LostPilotsInfo.ContainsKey(pilotDef.Description.Id))
                     {
                         if (ModState.LostPilotsInfo[pilotDef.Description.Id].PilotBiomeSkin ==
