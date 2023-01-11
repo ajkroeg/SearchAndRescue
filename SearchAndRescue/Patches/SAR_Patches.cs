@@ -48,9 +48,15 @@ namespace SearchAndRescue
                 {
                     if (__instance.IsPilotInjured())
                     {
-                        //var bonusHealth = __instance.GetPilot().BonusHealth;
-
-                        __instance.GetPilot().InjurePilot(sourceID, stackItemID, 1, DamageType.HeadShot, null, __instance);
+                        var bonusHealth = __instance.GetPilot().BonusHealth;
+                        if (ModInit.modSettings.InjureIgnoreBonusHealth)
+                        {
+                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, bonusHealth + 1, DamageType.HeadShot, null, __instance);
+                        }
+                        else
+                        {
+                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, 1, DamageType.HeadShot, null, __instance);
+                        }
                     }
                     if (!__instance.IsPilotRecovered())
                     {
