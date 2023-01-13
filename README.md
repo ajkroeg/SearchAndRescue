@@ -25,7 +25,7 @@ mod.json settings follow:
 
 `BasePilotRecoveryChance` - float. baseline chance of recovering ejected pilot. further modified by AbstractActor statistic <float> `SAR_RecoveryChanceMult`
 
-`InjureOnEjectChance` - float, baseline chance of pilots being injured on ejection. further modified by AbstractActor statistic <float> `SAR_InjuryChanceMult`
+`InjureOnEjectChance` - float, baseline chance of pilots being injured on ejection. further modified by AbstractActor statistic <float> `SAR_InjuryChanceMult`. Injure on eject is a separate roll from recovery.
 
 `InjureIgnoreBonusHealth` - bool, if true, ejection injury "count" will be increased to compensate for BonusHealth (such as that added by reinforced cockpits)
 
