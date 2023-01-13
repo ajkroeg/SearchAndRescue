@@ -81,6 +81,14 @@ namespace SearchAndRescue
                     var tagPilot = tag.Substring(GlobalVars.SAR_PilotCompanyTagPrefix.Length);
                     var pilotDef = new PilotDef();
                     pilotDef.FromJSON(tagPilot);
+
+                    if (sim.PilotRoster.Any(x => x.pilotDef.Description.Id == pilotDef.Description.Id))
+                    {
+                        ModInit.modLog?.Info?.Write($"[DeSerializeMissingPilots] Found supposedly missing pilot {pilotDef.Description.Id} in roster. Assuming pilot in roster is not MIA and removing from SAR.");
+                        sim.CompanyTags.Remove(tag);
+                        continue;
+                    }
+
                     string simUID = "";
                     string systemTag = "";
                     Biome.BIOMESKIN biomeSkin = Biome.BIOMESKIN.UNDEFINED;

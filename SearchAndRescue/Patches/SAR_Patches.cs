@@ -43,21 +43,22 @@ namespace SearchAndRescue
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
                 if (ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract.Override.ID) || ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract.Override.ContractTypeValue.Name)) return;
-                var pilotDef = __instance.GetPilot().ToPilotDef(true);
-                if (sim.PilotRoster.Any(x=>x.pilotDef.Description.Id == pilotDef.Description.Id))
+                
+                if (__instance.GetPilot().IsPlayerCharacter || sim.PilotRoster.Any(x=>x.pilotDef.Description.Id == __instance.GetPilot().pilotDef.Description.Id))
                 {
                     if (__instance.IsPilotInjured())
                     {
                         var bonusHealth = __instance.GetPilot().BonusHealth;
                         if (ModInit.modSettings.InjureIgnoreBonusHealth)
                         {
-                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, bonusHealth + 1, DamageType.HeadShot, null, __instance);
+                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, bonusHealth + 1, DamageType.ComponentExplosion, null, __instance);
                         }
                         else
                         {
-                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, 1, DamageType.HeadShot, null, __instance);
+                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, 1, DamageType.ComponentExplosion, null, __instance);
                         }
                     }
+                    var pilotDef = __instance.GetPilot().ToPilotDef(true);
                     if (!__instance.IsPilotRecovered())
                     {
                         ModState.CompleteContractRunOnce = false;

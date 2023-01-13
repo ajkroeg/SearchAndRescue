@@ -10,6 +10,8 @@ mod.json settings follow:
 		"enableDebug": false,
 		"enableTrace": true,
 		"BasePilotRecoveryChance": 0.0,
+		"InjureOnEjectChance": 0.5,
+		"InjureIgnoreBonusHealth": true,
 		"ContractTimeoutIcon": "time",
 		"AlwaysRecoverContractIDs": [],
 		"RecoveryContractIDs": [
@@ -22,6 +24,10 @@ mod.json settings follow:
 `enableDebug` and `enableDebug` - bools, enable logging levels. recommend disable debug, leave trace enabled until sure no bugs remain.
 
 `BasePilotRecoveryChance` - float. baseline chance of recovering ejected pilot. further modified by AbstractActor statistic <float> `SAR_RecoveryChanceMult`
+
+`InjureOnEjectChance` - float, baseline chance of pilots being injured on ejection. further modified by AbstractActor statistic <float> `SAR_InjuryChanceMult`
+
+`InjureIgnoreBonusHealth` - bool, if true, ejection injury "count" will be increased to compensate for BonusHealth (such as that added by reinforced cockpits)
 
 `ContractTimeoutIcon`: string, name of svg resource used for icon when contract has timeout
 
