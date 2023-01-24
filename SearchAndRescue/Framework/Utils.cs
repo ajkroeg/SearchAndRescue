@@ -227,10 +227,13 @@ namespace SearchAndRescue
         }
         public static void GetDifficultyRangeForContractPublic(this SimGameState sim, StarSystem system, out int minDiff, out int maxDiff)
         {
-            int baseDiff = system.Def.GetDifficulty(sim.SimGameMode) + Mathf.FloorToInt(sim.GlobalDifficulty);
+            int sysDiff = system.Def.GetDifficulty(sim.SimGameMode); 
+            int globalDiff = Mathf.FloorToInt(sim.GlobalDifficulty);
+            var baseDiff = sysDiff + globalDiff;
             int contractDifficultyVariance = sim.Constants.Story.ContractDifficultyVariance;
             minDiff = Mathf.Max(1, baseDiff - contractDifficultyVariance);
-            maxDiff = Mathf.Max(1, baseDiff + contractDifficultyVariance);
+            maxDiff = Mathf.Max(2, baseDiff + contractDifficultyVariance);
+            ModInit.modLog?.Info?.Write($"[SAR - GetDifficultyRangeForContractPublic] - fetch difficulty range: Min: {minDiff} Max: {maxDiff} SystemDiff {sysDiff}, GlobalDiff {globalDiff}, basediff: {baseDiff}");
         }
     }
 }

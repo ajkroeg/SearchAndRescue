@@ -20,6 +20,7 @@ using Org.BouncyCastle.Utilities;
 using static SearchAndRescue.Framework.Classes;
 using FluffyUnderware.Curvy.Generator;
 using SimGameState = BattleTech.SimGameState;
+using static BattleTech.SimGameState;
 
 namespace SearchAndRescue
 {
@@ -141,6 +142,7 @@ namespace SearchAndRescue
                         if (tempOverride.difficulty <= maxDiff && tempOverride.difficulty >= minDiff)
                         {
                             potentialContracts.Add(cid);
+                            ModInit.modLog?.Info?.Write($"[Contract_CompleteContract] - Added {cid} due to difficulty {tempOverride.difficulty} in range {minDiff} - {maxDiff}");
                         }
                     }
                 }
@@ -154,20 +156,21 @@ namespace SearchAndRescue
                         if (potentialContracts.Count > 0)
                         {
                             contractName = potentialContracts.GetRandomElement();
-                            ModInit.modLog?.Trace?.Write($"[Contract_CompleteContract]: selected {contractName} from difficulty-appropriate contracts. hopefully.");
+                            ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: selected {contractName} from difficulty-appropriate contracts. hopefully.");
                         }
                         else
                         {
                             contractName = ModInit.modSettings.RecoveryContractIDs.GetRandomElement();
-                            ModInit.modLog?.Trace?.Write($"[Contract_CompleteContract]: selected {contractName} from all potential bc we couldnt find anything with right difficulty.");
+                            ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: selected {contractName} from all potential bc we couldnt find anything with right difficulty.");
                         }
                         var contractData = new SimGameState.AddContractData
                         {
                             ContractName = contractName,
                             Employer = "SelfEmployed",
                             Target = targetFaction.Name,
-                            TargetSystem = sim.CurSystem.Def.CoreSystemID
-                        };
+                            TargetSystem = sim.CurSystem.ID,
+                            IsGlobal = true
+                    };
                         MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                         sim.AddContract(contractData);
                         MapRandomizer.ModState.IsSystemActionPatch = null;

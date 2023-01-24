@@ -143,11 +143,21 @@ namespace SearchAndRescue.Patches
                 if (sim == null) return;
                 if (contractOverride.usesExpiration && contractOverride.expirationTimeOverride > 0)
                 {
-                    __instance.SetExpiration(contractOverride.expirationTimeOverride);
+                    __instance.SetExpiration(contractOverride.expirationTimeOverride); // need to patch sim.CreateTravelContract bc it "Reconstructs" ConctractOVerride liek a fucking moron
 
                     //var entry = new Classes.WorkOrderEntry_Notification_Timed($"{contractOverride.ID}_TimeLeft", $"Time-limited contract!", __instance.ExpirationTime);
                     //sim.RoomManager.AddWorkQueueEntry(entry); //probably need to patch TaskTimelineWidget/RefreshEntries
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(ContractOverride), "CopyContractTypeData", new Type[] {typeof(ContractOverride)})]
+        public static class ContractOverride_CopyContractTypeData
+        {
+            public static void Postfix(ContractOverride __instance, ContractOverride ovr)
+            {
+                __instance.usesExpiration = ovr.usesExpiration;
+                __instance.expirationTimeOverride = ovr.expirationTimeOverride;
             }
         }
 
