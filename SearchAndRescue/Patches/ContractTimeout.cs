@@ -62,7 +62,7 @@ namespace SearchAndRescue.Patches
                     var removePilotName = "";
                     foreach (var lostPilotInfo in ModState.LostPilotsInfo)
                     {
-                        if (lostPilotInfo.Value.MissingPilotSystem == __instance.TargetSystem)
+                        if (lostPilotInfo.Value.MissingPilotSystem == __instance.TargetSystem && __instance.ContractBiome == lostPilotInfo.Value.PilotBiomeSkin)
                         {
                             toRemove = lostPilotInfo.Key;
                             removePilotName = lostPilotInfo.Value.MissingPilotDef.Description.Callsign;
@@ -85,12 +85,12 @@ namespace SearchAndRescue.Patches
                             break;
                         }
                     }
-                    ModState.LostPilotsInfo.Remove(toRemove);//what happens if more than one pilot contract expires?
+                    ModState.LostPilotsInfo.Remove(toRemove);//what happens if more than one pilot contract expires? should be ok, since each contract is refreshing separately here
                     ModInit.modLog?.Info?.Write($"[Contract_OnDayPassed] - removed {toRemove} from missing pilot state.");
 
-                    contractWidget.ListContracts(sim.GetAllCurrentlySelectableContracts(false), null);
+                    contractWidget.ListContracts(sim.GetAllCurrentlySelectableContracts(true), null);
 
-                    if (!string.IsNullOrEmpty(toRemove) && toRemove == removePilotName)
+                    if (!string.IsNullOrEmpty(toRemove))
                     {
                         sim.interruptQueue.QueuePauseNotification("Pilot Rescue EXPIRED", $"The window for recovery has passed for {removePilotName}. Another name for the wall.",
                             sim.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
