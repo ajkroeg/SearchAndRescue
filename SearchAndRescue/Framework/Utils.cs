@@ -58,6 +58,11 @@ namespace SearchAndRescue
                 var biomeTag = $"{GlobalVars.SAR_BiomePrefix}{missingPilotInfo.Value.PilotBiomeSkin}";
                 var systemTag = $"{GlobalVars.SAR_SystemPrefix}{missingPilotInfo.Value.MissingPilotSystem}";
                 var pilotUIDTag = $"{GlobalVars.SAR_PilotSimUIDPrefix}{missingPilotInfo.Value.PilotSimUID}";
+                if (pilotDef.portraitSettings != null)
+                {
+                    var portraitTag = $"{GlobalVars.SAR_PortraitSettingsPrefix}{pilotDef.portraitSettings.ToJSON()}";
+                    pilotDef.PilotTags.Add(portraitTag);
+                }
                 pilotDef.PilotTags.Add(biomeTag);
                 pilotDef.PilotTags.Add(systemTag);
                 pilotDef.PilotTags.Add(pilotUIDTag);
@@ -116,6 +121,15 @@ namespace SearchAndRescue
                             Enum.TryParse<Biome.BIOMESKIN>(biomeTag, out biomeSkin);
                             pilotDef.PilotTags.Remove(pilotTag);
                             ModInit.modLog?.Info?.Write($"[DeSerializeMissingPilots] - {pilotDef.Description.Callsign} - processed tag {pilotTag}, biome tag set to {biomeSkin.ToString()}");
+                            continue;
+                        }
+                        if (pilotTag.StartsWith(GlobalVars.SAR_PortraitSettingsPrefix))
+                        {
+                            var portraitSettingsString = pilotTag.Substring(GlobalVars.SAR_PortraitSettingsPrefix.Length);
+                            var portraitSettings = new PortraitSettings();
+                            portraitSettings.FromJSON(portraitSettingsString);
+                            pilotDef.portraitSettings = portraitSettings;
+                            pilotDef.PilotTags.Remove(pilotTag);
                         }
                     }
 
@@ -171,10 +185,22 @@ namespace SearchAndRescue
             return roll <= chance;
         }
 
+        public static void StripSARTags(this PilotDef pilotDef)
+        {
+            for (var index = pilotDef.PilotTags.Count - 1; index >= 0; index--)
+            {
+                var tag = pilotDef.PilotTags[index];
+                if (tag.StartsWith(GlobalVars.SAR_GeneralPrefix))
+                {
+                    pilotDef.PilotTags.Remove(tag);
+                }
+            }
+        }
         public static void AddRecoveredPilotToRoster(this SimGameState sim, Pilot pilot)
         {
 //            DataManager.InjectedDependencyLoadRequest injectedDependencyLoadRequest = new DataManager.InjectedDependencyLoadRequest(sim.DataManager);
 //            pilot.pilotDef.GatherDependencies(sim.DataManager, injectedDependencyLoadRequest, 1000U);
+            pilot.pilotDef.StripSARTags();
             pilot.FromPilotDef(pilot.pilotDef);
 //            pilot.Hydrate(null, null);
 //            pilot.SimGameInitFromSave();

@@ -12,10 +12,12 @@ namespace SearchAndRescue.Framework
 {
     public static class GlobalVars
     {
+        public const string SAR_GeneralPrefix = "SAR_";
         public const string SAR_PilotCompanyTagPrefix = "SAR_PILOT_";
         public const string SAR_PilotSimUIDPrefix = "SAR_PilotSimUID_";
         public const string SAR_BiomePrefix = "SAR_BIOME_";
         public const string SAR_SystemPrefix = "SAR_SYSTEM_";
+        public const string SAR_PortraitSettingsPrefix = "SAR_PortraitSettings_";
         public const string SAR_RecoveryChanceStat = "SAR_RecoveryChanceMult";
         public const string SAR_InjuryChanceStat = "SAR_InjuryChanceMult";
     }
