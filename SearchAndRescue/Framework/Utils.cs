@@ -71,12 +71,12 @@ namespace SearchAndRescue
                 var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
                 sim.CompanyTags.Add(pilotTag);
                 ModInit.modLog?.Trace?.Write($"[SerializeAllMissingPilots] - Added pilotTag {pilotTag} to company tags.");
-
             }
         }
 
         public static void DeSerializeMissingPilots(this SimGameState sim)
         {
+            ModState.LostPilotsInfo = new Dictionary<string, Classes.MissingPilotInfo>();
             for (var i = sim.CompanyTags.Count - 1; i >= 0; i--)
             {
                 var tag = sim.CompanyTags[i];
