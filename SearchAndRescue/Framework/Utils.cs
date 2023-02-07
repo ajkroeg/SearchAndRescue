@@ -1,53 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 using BattleTech;
 using BattleTech.Data;
 using BattleTech.Framework;
 using BattleTech.Portraits;
-using BattleTech.Save;
-using BattleTech.StringInterpolation;
-using Harmony;
-using IRBTModUtils;
 using SearchAndRescue.Framework;
 using UnityEngine;
-using static BattleTech.SimGameState;
 using ModState = SearchAndRescue.Framework.ModState;
 
 namespace SearchAndRescue
 {
     public static class Utils
     {
-        public static void SerializeMissingPilot(this SimGameState sim, Pilot simPilot)
-        {
-            if (ModState.LostPilotsInfo.ContainsKey(simPilot.pilotDef.Description.Id))
-            {
-                if (string.IsNullOrEmpty(ModState.LostPilotsInfo[simPilot.pilotDef.Description.Id].PilotSimUID))
-                {
-                    ModState.LostPilotsInfo[simPilot.pilotDef.Description.Id].PilotSimUID = simPilot.GUID;
-                }
-            }
-            //save pilot to...soomething.
-            var pilotDef = simPilot.ToPilotDef(true);
-             
-            var biomeTag = $"{GlobalVars.SAR_BiomePrefix}{ModState.LostPilotsInfo[simPilot.pilotDef.Description.Id].PilotBiomeSkin}";
-            var systemTag = $"{GlobalVars.SAR_SystemPrefix}{ModState.LostPilotsInfo[simPilot.pilotDef.Description.Id].MissingPilotSystem}";
-            var pilotUIDTag = $"{GlobalVars.SAR_PilotSimUIDPrefix}{simPilot.GUID}";
-            pilotDef.PilotTags.Add(biomeTag);
-            pilotDef.PilotTags.Add(systemTag);
-            pilotDef.PilotTags.Add(pilotUIDTag);
-            ModInit.modLog?.Info?.Write($"[SerializeMissingPilot] - Added biome {biomeTag}, system {systemTag}, and sUID {pilotUIDTag} to {simPilot.Callsign}'s pilot tags for recovery mission.");
-
-            var pilotSon = pilotDef.ToJSON();
-            var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
-            sim.CompanyTags.Add(pilotTag);
-        }
-
+        
         public static void SerializeAllMissingPilots(this SimGameState sim)
         {
             //save pilot to...soomething.
@@ -98,6 +64,10 @@ namespace SearchAndRescue
                     string systemTag = "";
                     Biome.BIOMESKIN biomeSkin = Biome.BIOMESKIN.UNDEFINED;
                     ModInit.modLog?.Debug?.Write($"[DeSerializeMissingPilots] process missing pilot tag {pilotDef.Description.Callsign}");
+                    var simUIDCount = 0;
+                    var sysTagCount = 0;
+                    var biomeTagCount = 0;
+                    
                     for (var index = pilotDef.PilotTags.Count - 1; index >= 0; index--)
                     {
                         var pilotTag = pilotDef.PilotTags[index];
@@ -106,6 +76,7 @@ namespace SearchAndRescue
                             simUID = pilotTag.Substring(GlobalVars.SAR_PilotSimUIDPrefix.Length);
                             pilotDef.PilotTags.Remove(pilotTag);
                             ModInit.modLog?.Info?.Write($"[DeSerializeMissingPilots] - {pilotDef.Description.Callsign} - processed tag {pilotTag}, simUID set to {simUID}");
+                            simUIDCount++;
                             continue;
                         }
                         if (pilotTag.StartsWith(GlobalVars.SAR_SystemPrefix))
@@ -113,6 +84,7 @@ namespace SearchAndRescue
                             systemTag = pilotTag.Substring(GlobalVars.SAR_SystemPrefix.Length);
                             pilotDef.PilotTags.Remove(pilotTag);
                             ModInit.modLog?.Info?.Write($"[DeSerializeMissingPilots] - {pilotDef.Description.Callsign} - processed tag {pilotTag}, system tag set to {systemTag}");
+                            sysTagCount++;
                             continue;
                         }
                         if (pilotTag.StartsWith(GlobalVars.SAR_BiomePrefix))
@@ -121,6 +93,7 @@ namespace SearchAndRescue
                             Enum.TryParse<Biome.BIOMESKIN>(biomeTag, out biomeSkin);
                             pilotDef.PilotTags.Remove(pilotTag);
                             ModInit.modLog?.Info?.Write($"[DeSerializeMissingPilots] - {pilotDef.Description.Callsign} - processed tag {pilotTag}, biome tag set to {biomeSkin.ToString()}");
+                            biomeTagCount++;
                             continue;
                         }
                         if (pilotTag.StartsWith(GlobalVars.SAR_PortraitSettingsPrefix))
@@ -131,6 +104,20 @@ namespace SearchAndRescue
                             pilotDef.portraitSettings = portraitSettings;
                             pilotDef.PilotTags.Remove(pilotTag);
                         }
+                    }
+
+                    if (simUIDCount > 1 || sysTagCount > 1 || biomeTagCount > 1)
+                    {
+                        ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - ERROR! Found multiple SAR tags. Restoring pilot to roster.");
+                        pilotDef.DataManager = sim.DataManager;
+                        pilotDef.StripSARTags();
+                        var pilot = new Pilot(pilotDef, simUID, true);
+                        pilot.ForceRefreshDef();
+                        sim.AddRecoveredPilotToRoster(pilot);
+                        sim.interruptQueue.QueuePauseNotification("PILOT RESTORED", $"ERROR: Search and Rescue found duplicate or ambiguous info tags on pilot, unable to parse rescue contract. Restoring pilot {pilotDef.Description.Id}, callsign {pilot.Callsign} to roster.",
+                            sim.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
+
+                        continue;
                     }
 
                     if (string.IsNullOrEmpty(simUID) ||string.IsNullOrEmpty(systemTag) || biomeSkin == Biome.BIOMESKIN.UNDEFINED)

@@ -1,17 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using BattleTech;
 using Harmony;
-using IRBTModUtils.CustomInfluenceMap;
 using IRBTModUtils.Logging;
-using Localize;
-using Microsoft.Win32;
 using Newtonsoft.Json;
-using SearchAndRescue.Framework;
-using UnityEngine;
-using static System.Runtime.CompilerServices.RuntimeHelpers;
 using Random = System.Random;
 
 namespace SearchAndRescue

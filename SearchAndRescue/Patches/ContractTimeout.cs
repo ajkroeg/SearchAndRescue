@@ -3,20 +3,13 @@ using Harmony;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using BattleTech.Framework;
 using BattleTech.UI;
 using BattleTech.UI.Tooltips;
 using SVGImporter;
 using UnityEngine;
-using UnityEngine.UI;
 using SearchAndRescue.Framework;
-using System.Diagnostics.Contracts;
-using BattleTech.Serialization.Handlers;
 using Contract = BattleTech.Contract;
-using System.Reflection.Emit;
 
 namespace SearchAndRescue.Patches
 {

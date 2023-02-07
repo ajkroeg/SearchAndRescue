@@ -3,24 +3,15 @@ using Harmony;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using BattleTech.Framework;
 using BattleTech.Save;
 using BattleTech.Save.Test;
 using BattleTech.UI;
 using BattleTech.UI.TMProWrapper;
-using IRBTModUtils;
 using SearchAndRescue.Framework;
-using UnityEngine;
 using UnityEngine.UI;
 using ModState = SearchAndRescue.Framework.ModState;
-using Org.BouncyCastle.Utilities;
-using static SearchAndRescue.Framework.Classes;
-using FluffyUnderware.Curvy.Generator;
 using SimGameState = BattleTech.SimGameState;
-using static BattleTech.SimGameState;
 
 namespace SearchAndRescue
 {
