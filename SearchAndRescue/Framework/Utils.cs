@@ -114,9 +114,9 @@ namespace SearchAndRescue
                         var pilot = new Pilot(pilotDef, simUID, true);
                         pilot.ForceRefreshDef();
                         sim.AddRecoveredPilotToRoster(pilot);
-                        sim.interruptQueue.QueuePauseNotification("PILOT RESTORED", $"ERROR: Search and Rescue found duplicate or ambiguous info tags on pilot, unable to parse rescue contract. Restoring pilot {pilotDef.Description.Id}, callsign {pilot.Callsign} to roster.",
-                            sim.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
-
+                        //sim.interruptQueue.QueuePauseNotification("PILOT RESTORED", $"ERROR: Search and Rescue found duplicate or ambiguous info tags on pilot, unable to parse rescue contract. Restoring pilot {pilotDef.Description.Id}, callsign {pilot.Callsign} to roster.",
+                        //    sim.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
+                        //remove interrupt bc it fucks up on save load and i dont care
                         continue;
                     }
 
