@@ -24,6 +24,7 @@ namespace SearchAndRescue
                 var biomeTag = $"{GlobalVars.SAR_BiomePrefix}{missingPilotInfo.Value.PilotBiomeSkin}";
                 var systemTag = $"{GlobalVars.SAR_SystemPrefix}{missingPilotInfo.Value.MissingPilotSystem}";
                 var pilotUIDTag = $"{GlobalVars.SAR_PilotSimUIDPrefix}{missingPilotInfo.Value.PilotSimUID}";
+                var pilotSAROpforTag = $"{GlobalVars.SAR_OpforFaction}{missingPilotInfo.Value.PilotSimUID}";
                 if (pilotDef.portraitSettings != null)
                 {
                     var portraitTag = $"{GlobalVars.SAR_PortraitSettingsPrefix}{pilotDef.portraitSettings.ToJSON()}";
@@ -32,6 +33,7 @@ namespace SearchAndRescue
                 pilotDef.PilotTags.Add(biomeTag);
                 pilotDef.PilotTags.Add(systemTag);
                 pilotDef.PilotTags.Add(pilotUIDTag);
+                pilotDef.PilotTags.Add(pilotSAROpforTag);
                 ModInit.modLog?.Info?.Write($"[SerializeAllMissingPilots] - Added biome {biomeTag}, system {systemTag} and simUID {pilotUIDTag} to {pilotDef.Description.Callsign}'s pilot tags for recovery mission.");
                 var pilotSon = pilotDef.ToJSON();
                 var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
@@ -62,11 +64,13 @@ namespace SearchAndRescue
 
                     string simUID = "";
                     string systemTag = "";
+                    string opforTag = "";
                     Biome.BIOMESKIN biomeSkin = Biome.BIOMESKIN.UNDEFINED;
                     ModInit.modLog?.Debug?.Write($"[DeSerializeMissingPilots] process missing pilot tag {pilotDef.Description.Callsign}");
                     var simUIDCount = 0;
                     var sysTagCount = 0;
                     var biomeTagCount = 0;
+                    var opforTagCount = 0;
                     
                     for (var index = pilotDef.PilotTags.Count - 1; index >= 0; index--)
                     {
@@ -96,6 +100,14 @@ namespace SearchAndRescue
                             biomeTagCount++;
                             continue;
                         }
+                        if (pilotTag.StartsWith(GlobalVars.SAR_OpforFaction))
+                        {
+                            opforTag = pilotTag.Substring(GlobalVars.SAR_OpforFaction.Length);
+                            pilotDef.PilotTags.Remove(pilotTag);
+                            ModInit.modLog?.Info?.Write($"[DeSerializeMissingPilots] - {pilotDef.Description.Callsign} - processed tag {pilotTag}, opforTag tag set to {opforTag}");
+                            opforTagCount++;
+                            continue;
+                        }
                         if (pilotTag.StartsWith(GlobalVars.SAR_PortraitSettingsPrefix))
                         {
                             var portraitSettingsString = pilotTag.Substring(GlobalVars.SAR_PortraitSettingsPrefix.Length);
@@ -106,7 +118,7 @@ namespace SearchAndRescue
                         }
                     }
 
-                    if (simUIDCount > 1 || sysTagCount > 1 || biomeTagCount > 1)
+                    if (simUIDCount > 1 || sysTagCount > 1 || biomeTagCount > 1 || opforTagCount > 1)
                     {
                         ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - ERROR! Found multiple SAR tags. Restoring pilot to roster.");
                         pilotDef.DataManager = sim.DataManager;
@@ -120,11 +132,13 @@ namespace SearchAndRescue
                         continue;
                     }
 
-                    if (string.IsNullOrEmpty(simUID) ||string.IsNullOrEmpty(systemTag) || biomeSkin == Biome.BIOMESKIN.UNDEFINED)
+                    if (string.IsNullOrEmpty(simUID) ||string.IsNullOrEmpty(systemTag) || biomeSkin == Biome.BIOMESKIN.UNDEFINED || string.IsNullOrEmpty(opforTag))
                     {
-                        ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - ERROR on deserialize. Null simUID {string.IsNullOrEmpty(simUID)}, system {string.IsNullOrEmpty(systemTag)}, or undefined biome {biomeSkin == Biome.BIOMESKIN.UNDEFINED}.");
+                        if (string.IsNullOrEmpty(systemTag)) systemTag = sim.CurSystem.SystemID;
+                        if (string.IsNullOrEmpty(opforTag)) opforTag = sim.CurSystem.OwnerValue.Name;
+                        ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - ERROR on deserialize. Null simUID {string.IsNullOrEmpty(simUID)}, system {string.IsNullOrEmpty(systemTag)}, or undefined biome {biomeSkin == Biome.BIOMESKIN.UNDEFINED}. Null system replaced with current system, null opfor replaced with current system owner");
                     }
-                    var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, simUID, systemTag, biomeSkin, false);
+                    var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, simUID, systemTag, biomeSkin, opforTag, false);
                     if (ModState.LostPilotsInfo.ContainsKey(pilotDef.Description.Id))
                     {
                         if (ModState.LostPilotsInfo[pilotDef.Description.Id].PilotBiomeSkin ==
@@ -134,6 +148,8 @@ namespace SearchAndRescue
                             ModState.LostPilotsInfo[pilotDef.Description.Id].PilotSimUID = simUID;
                         if (string.IsNullOrEmpty(ModState.LostPilotsInfo[pilotDef.Description.Id].MissingPilotSystem))
                             ModState.LostPilotsInfo[pilotDef.Description.Id].MissingPilotSystem = systemTag;
+                        if (string.IsNullOrEmpty(ModState.LostPilotsInfo[pilotDef.Description.Id].SAR_Opfor))
+                            ModState.LostPilotsInfo[pilotDef.Description.Id].MissingPilotSystem = opforTag;
                         ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - ERROR - {pilotDef.Description.Id} already exist in missing pilot dictionary! Updated missing values.");
                     }
                     else
