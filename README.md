@@ -36,7 +36,7 @@ mod.json settings follow:
 
 `AlwaysRecoverContractIDs`: list of contract IDs or ContractTypes (i.e `DefendBase_AllQuiet_NEW` or `DefendBase`)
 
-`RecoveryContractIDs`: list of contract IDs which will be used for pilot rescue contracts. recommend having at least one for each "difficulty" tier. In addition, I highly recommend you include at least one contract type that has a valid map for every biome as a "fallback" of sorts. Recovery and SimpleBattle are good candidates.
+`RecoveryContractIDs`: list of contract IDs which will be used for pilot rescue contracts. recommend having at least one for each "difficulty" tier. In addition, I highly recommend you include at least one contract of a type that has a valid map for every biome as a "fallback" of sorts. Recovery and SimpleBattle are good candidates.
 
 ### So how does it work?
 
