@@ -14,6 +14,7 @@ using ModState = SearchAndRescue.Framework.ModState;
 using SimGameState = BattleTech.SimGameState;
 using Org.BouncyCastle.Utilities;
 using static BattleTech.SimGameState;
+using BattleTech.Data;
 
 namespace SearchAndRescue
 {
@@ -53,7 +54,7 @@ namespace SearchAndRescue
                         }
                     }
                     var pilotDef = __instance.GetPilot().ToPilotDef(true);
-                    if (!__instance.IsPilotRecovered())
+                    if (!__instance.IsPilotRecovered(__instance.Combat.ActiveContract.Override.employerTeam.FactionValue.Name != sim.CurSystem.OwnerValue.Name))
                     {
                         ModState.CompleteContractRunOnce = false;
                         var biome = __instance.Combat.ActiveContract.ContractBiome;
@@ -140,17 +141,36 @@ namespace SearchAndRescue
                         }
                     }
                 }
+                potentialContracts.Shuffle();
 
                 foreach (UnitResult unitResult in __instance.PlayerUnitResults)
                 {
                     if (ModState.LostPilotsInfo.ContainsKey(unitResult.pilot.Description.Id))
                     {
                         biomes.Add(ModState.LostPilotsInfo[unitResult.pilot.pilotDef.Description.Id].PilotBiomeSkin);
-                        string contractName;
+                        string contractName = "";
                         if (potentialContracts.Count > 0)
                         {
-                            contractName = potentialContracts.GetRandomElement();
-                            ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: selected {contractName} from difficulty-appropriate contracts. hopefully.");
+                            //contractName = potentialContracts.GetRandomElement();
+                            foreach (var contract in potentialContracts)
+                            {
+                                var contractOverride = sim.DataManager.ContractOverrides.Get(contract).Copy();
+                                var releasedMapsAndEncountersByContractTypeAndOwnership = MetadataDatabase.Instance.GetReleasedMapsAndEncountersByContractTypeAndOwnership(contractOverride.ContractTypeValue.ID, false);
+                                if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
+                                {
+                                    contractName = contract;
+                                    break;
+                                }
+                                else 
+                                {
+                                   ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: no playable contracts for type {contractOverride.contractTypeID}; {contractOverride.ContractTypeValue.ID}.");
+                                }
+                            }
+                            if (string.IsNullOrEmpty(contractName))
+                            {
+                                ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: You did not configure a fallback, and we couldn't find a map for ANY SAR contracts. This will break.");
+                            }
+                            else ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: selected {contractName} from difficulty-appropriate contracts. hopefully.");
                         }
                         else
                         {

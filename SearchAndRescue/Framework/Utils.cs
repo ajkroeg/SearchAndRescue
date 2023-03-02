@@ -170,10 +170,10 @@ namespace SearchAndRescue
         {
             return actor.StatCollection.GetValue<float>(GlobalVars.SAR_InjuryChanceStat);
         }
-        public static bool IsPilotRecovered(this AbstractActor actor)
+        public static bool IsPilotRecovered(this AbstractActor actor, bool friendlyTerritory) // add higher weight and setting for employer owns planet (more likely to recover)
         {
             if (actor.GetPilot().IsPlayerCharacter) return true;
-            var chance = ModInit.modSettings.BasePilotRecoveryChance * actor.getSAR_RecoveryChanceMult();
+            var chance = ModInit.modSettings.BasePilotRecoveryChance * actor.getSAR_RecoveryChanceMult() * (friendlyTerritory ? ModInit.modSettings.FriendlyTerritoryRecoveryMult : 1f);
             var roll = ModInit.Random.NextDouble();
             ModInit.modLog?.Info?.Write($"[IsPilotRecovered] - {actor.GetPilot().Callsign} Pilot recovery roll {roll} vs chance {chance}. Success? {roll <= chance}.");
             return roll <= chance;

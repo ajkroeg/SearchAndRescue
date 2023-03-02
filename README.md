@@ -9,7 +9,8 @@ mod.json settings follow:
 "Settings": {
 		"enableDebug": false,
 		"enableTrace": true,
-		"BasePilotRecoveryChance": 0.0,
+		"BasePilotRecoveryChance": 0.5,
+		"FriendlyTerritoryRecoveryMult": 1.2,
 		"InjureOnEjectChance": 0.5,
 		"InjureIgnoreBonusHealth": true,
 		"ContractTimeoutIcon": "time",
@@ -23,7 +24,9 @@ mod.json settings follow:
 ```
 `enableDebug` and `enableDebug` - bools, enable logging levels. recommend disable debug, leave trace enabled until sure no bugs remain.
 
-`BasePilotRecoveryChance` - float. baseline chance of recovering ejected pilot. further modified by AbstractActor statistic <float> `SAR_RecoveryChanceMult`
+`BasePilotRecoveryChance` - float. baseline chance of recovering ejected pilot. further modified by AbstractActor statistic <float> `SAR_RecoveryChanceMult` and `FriendlyTerritoryRecoveryMult`
+
+`FriendlyTerritoryRecoveryMult` - float, multiplier on recovery chance if your employer is also the planet owner. For example, given above settings and unit `SAR_RecoveryChanceMult` set to 1.0, final recovery chance when employer is system owner would be 0.6: `BasePilotRecoveryChance 0.5 x FriendlyTerritoryRecoveryMult 1.2 x SAR_RecoveryChanceMult 1.0 = 0.6`
 
 `InjureOnEjectChance` - float, baseline chance of pilots being injured on ejection. further modified by AbstractActor statistic <float> `SAR_InjuryChanceMult`. Injure on eject is a separate roll from recovery.
 

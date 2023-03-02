@@ -51,6 +51,7 @@ namespace SearchAndRescue
         public bool enableTrace = false;
 
         public float BasePilotRecoveryChance = 0.5f;
+        public float FriendlyTerritoryRecoveryMult = 1.2f;
         public float InjureOnEjectChance = 0f;
         public bool InjureIgnoreBonusHealth = false;
         
