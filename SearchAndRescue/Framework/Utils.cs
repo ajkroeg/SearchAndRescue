@@ -24,7 +24,7 @@ namespace SearchAndRescue
                 var biomeTag = $"{GlobalVars.SAR_BiomePrefix}{missingPilotInfo.Value.PilotBiomeSkin}";
                 var systemTag = $"{GlobalVars.SAR_SystemPrefix}{missingPilotInfo.Value.MissingPilotSystem}";
                 var pilotUIDTag = $"{GlobalVars.SAR_PilotSimUIDPrefix}{missingPilotInfo.Value.PilotSimUID}";
-                var pilotSAROpforTag = $"{GlobalVars.SAR_OpforFaction}{missingPilotInfo.Value.PilotSimUID}";
+                var pilotSAROpforTag = $"{GlobalVars.SAR_OpforFaction}{missingPilotInfo.Value.SAR_Opfor}";
                 if (pilotDef.portraitSettings != null)
                 {
                     var portraitTag = $"{GlobalVars.SAR_PortraitSettingsPrefix}{pilotDef.portraitSettings.ToJSON()}";
@@ -138,6 +138,19 @@ namespace SearchAndRescue
                         if (string.IsNullOrEmpty(opforTag)) opforTag = sim.CurSystem.OwnerValue.Name;
                         ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - ERROR on deserialize. Null simUID {string.IsNullOrEmpty(simUID)}, system {string.IsNullOrEmpty(systemTag)}, or undefined biome {biomeSkin == Biome.BIOMESKIN.UNDEFINED}. Null system replaced with current system, null opfor replaced with current system owner");
                     }
+
+                    if (opforTag.StartsWith("SGRef_"))
+                    {
+                        opforTag = sim.CurSystem.OwnerValue.Name;
+                        ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - *Somehow* pilot opfor tag became their sim UID? Fuck it, changing to system owner I guess.");
+                    }
+
+                    if (!systemTag.StartsWith("starsystemdef_"))
+                    {
+                        opforTag = sim.CurSystem.SystemID;
+                        ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - *Somehow* pilot system tag became not a starsystem. Changing to current system I guess.");
+
+                    }
                     var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, simUID, systemTag, biomeSkin, opforTag, false);
                     if (ModState.LostPilotsInfo.ContainsKey(pilotDef.Description.Id))
                     {
@@ -149,7 +162,7 @@ namespace SearchAndRescue
                         if (string.IsNullOrEmpty(ModState.LostPilotsInfo[pilotDef.Description.Id].MissingPilotSystem))
                             ModState.LostPilotsInfo[pilotDef.Description.Id].MissingPilotSystem = systemTag;
                         if (string.IsNullOrEmpty(ModState.LostPilotsInfo[pilotDef.Description.Id].SAR_Opfor))
-                            ModState.LostPilotsInfo[pilotDef.Description.Id].MissingPilotSystem = opforTag;
+                            ModState.LostPilotsInfo[pilotDef.Description.Id].SAR_Opfor = opforTag;
                         ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - ERROR - {pilotDef.Description.Id} already exist in missing pilot dictionary! Updated missing values.");
                     }
                     else
