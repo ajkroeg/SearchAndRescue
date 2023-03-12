@@ -388,7 +388,6 @@ namespace SearchAndRescue
                             ModInit.modLog?.Info?.Write(
                                 $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {__instance.GlobalContracts[i].Override.ID} and GUID {__instance.GlobalContracts[i].GUID}");
                             __instance.GlobalContracts.RemoveAt(i);
-                            
                         }
                     }
                     else
@@ -404,6 +403,13 @@ namespace SearchAndRescue
                                 __instance.GlobalContracts.RemoveAt(i);
                             }
                         }
+                    }
+
+                    if (__instance.CurSystem.ID == __instance.ActiveTravelContract.TargetSystem && (ModState.ContractNames.Contains(__instance.ActiveTravelContract.Override.contractName) ||
+                        ModInit.modSettings.RecoveryContractIDs.Contains(__instance.ActiveTravelContract.Override.ID)))
+                    {
+                        __instance.ClearBreadcrumb();
+                        ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - Active travel contract was SAR in current system, clearing it");
                     }
                 }
                 var recoveryContracts = __instance.GlobalContracts.FindAll(x =>
