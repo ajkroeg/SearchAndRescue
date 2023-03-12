@@ -4,6 +4,7 @@ using System.Reflection;
 using Harmony;
 using IRBTModUtils.Logging;
 using Newtonsoft.Json;
+using SearchAndRescue.Framework;
 using Random = System.Random;
 
 namespace SearchAndRescue

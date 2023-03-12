@@ -11,16 +11,13 @@ using BattleTech.UI.TMProWrapper;
 using SearchAndRescue.Framework;
 using UnityEngine.UI;
 using ModState = SearchAndRescue.Framework.ModState;
-using SimGameState = BattleTech.SimGameState;
-using Org.BouncyCastle.Utilities;
-using static BattleTech.SimGameState;
 using BattleTech.Data;
 
 namespace SearchAndRescue
 {
     public class SAR_Patches
     {
-        [HarmonyPatch(typeof(AbstractActor), "InitEffectStats", new Type[] {})]
+        [HarmonyPatch(typeof(AbstractActor), "InitEffectStats", new Type[] { })]
         public static class AbstractActor_InitEffectStats
         {
             public static void Postfix(AbstractActor __instance)
@@ -37,29 +34,39 @@ namespace SearchAndRescue
             {
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
-                if (ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract.Override.ID) || ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract.Override.ContractTypeValue.Name)) return;
-                
-                if (__instance.GetPilot().IsPlayerCharacter || sim.PilotRoster.Any(x=>x.pilotDef.Description.Id == __instance.GetPilot().pilotDef.Description.Id))
+                if (ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract.Override
+                        .ID) || ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract
+                        .Override.ContractTypeValue.Name)) return;
+
+                if (__instance.GetPilot().IsPlayerCharacter || sim.PilotRoster.Any(x =>
+                        x.pilotDef.Description.Id == __instance.GetPilot().pilotDef.Description.Id))
                 {
                     if (__instance.IsPilotInjured())
                     {
                         var bonusHealth = __instance.GetPilot().BonusHealth;
                         if (ModInit.modSettings.InjureIgnoreBonusHealth)
                         {
-                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, bonusHealth + 1, DamageType.ComponentExplosion, null, __instance);
+                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, bonusHealth + 1,
+                                DamageType.ComponentExplosion, null, __instance);
                         }
                         else
                         {
-                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, 1, DamageType.ComponentExplosion, null, __instance);
+                            __instance.GetPilot().InjurePilot(sourceID, stackItemID, 1, DamageType.ComponentExplosion,
+                                null, __instance);
                         }
                     }
+
                     var pilotDef = __instance.GetPilot().ToPilotDef(true);
-                    if (!__instance.IsPilotRecovered(__instance.Combat.ActiveContract.Override.employerTeam.FactionValue.Name != sim.CurSystem.OwnerValue.Name))
+                    if (!__instance.IsPilotRecovered(
+                            __instance.Combat.ActiveContract.Override.employerTeam.FactionValue.Name !=
+                            sim.CurSystem.OwnerValue.Name))
                     {
                         ModState.CompleteContractRunOnce = false;
-                        var biome = __instance.Combat.ActiveContract.ContractBiome;
-                        var targetFaction = __instance.Combat.ActiveContract.GetTeamFaction("be77cadd-e245-4240-a93e-b99cc98902a5");
-                        var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, __instance.GetPilot().GUID, sim.CurSystem.ID, biome, targetFaction.Name, true);
+                        //var biome = __instance.Combat.ActiveContract.ContractBiome;
+                        var targetFaction =
+                            __instance.Combat.ActiveContract.GetTeamFaction("be77cadd-e245-4240-a93e-b99cc98902a5");
+                        var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, __instance.GetPilot().GUID,
+                            sim.CurSystem.ID, targetFaction.Name, true);
                         ModState.LostPilotsInfo.Add(pilotDef.Description.Id, missingPilotInfo);
                     }
                 }
@@ -73,7 +80,7 @@ namespace SearchAndRescue
             {
                 if (ModState.LostPilotsInfo.ContainsKey(__instance.UnitData.pilot.pilotDef.Description.Id))
                 {
-                   
+
                     //no . doi sim pilot overlay,injuries horiz layout group,lopcalizable text
 
                     var injuryGroupComponent =
@@ -83,6 +90,7 @@ namespace SearchAndRescue
                         var localizeText = injuryGroupComponent.gameObject.GetComponentInChildren<LocalizableText>();
                         localizeText.SetText("MISSING IN ACTION");
                     }
+
                     __instance.SimGamePilotDataOverlay.SetActive(true);
 
                 }
@@ -99,34 +107,36 @@ namespace SearchAndRescue
                 foreach (var missingPilot in ModState.LostPilotsInfo)
                 {
                     if (!missingPilot.Value.CurrentContract) continue;
-                    var cmdUseCost = $"{missingPilot.Value.MissingPilotDef.Description.Callsign} Missing In Action! Complete rescue mission to recover.";
+                    var cmdUseCost =
+                        $"{missingPilot.Value.MissingPilotDef.Description.Callsign} Missing In Action! Complete rescue mission to recover.";
 
-                    var cmdUseCostResult = new MissionObjectiveResult($"{cmdUseCost}", Guid.NewGuid().ToString(), false, true, ObjectiveStatus.Ignored, false);
+                    var cmdUseCostResult = new MissionObjectiveResult($"{cmdUseCost}", Guid.NewGuid().ToString(), false,
+                        true, ObjectiveStatus.Ignored, false);
                     __instance.AddObjective(cmdUseCostResult);
                     missingPilot.Value.CurrentContract = false;
                 }
             }
         }
 
-        [HarmonyPatch(typeof(Contract), "CompleteContract", new Type[] { typeof(MissionResult), typeof(bool)})]
+        [HarmonyPatch(typeof(Contract), "CompleteContract", new Type[] {typeof(MissionResult), typeof(bool)})]
         public static class Contract_CompleteContract
         {
             static bool Prepare() => true; //enabled
+
             public static void Postfix(Contract __instance)
             {
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
-                if (ModState.CompleteContractRunOnce == true) return;
+                if (ModState.CompleteContractRunOnce) return;
                 ModState.CompleteContractRunOnce = true;
-                var biomes = new List<Biome.BIOMESKIN>();
-                var selfFaction = Utils.GetFactionValueFromString("SelfEmployed");
+                //var biomes = new List<Biome.BIOMESKIN>();
                 var targetFaction =
                     __instance.GetTeamFaction("be77cadd-e245-4240-a93e-b99cc98902a5");
                 ModInit.modLog?.Info?.Write(
-                    $"[Contract_CompleteContract] - dump lost pilots: keys: {string.Join(", ", ModState.LostPilotsInfo.Keys)}\n{string.Join(", ", ModState.LostPilotsInfo.Values)}" );
-                
-                var potentialContracts = new List<string>();
+                    $"[Contract_CompleteContract] - dump lost pilots: keys: {string.Join(", ", ModState.LostPilotsInfo.Keys)}");
 
+                var correctDifficultyContracts = new List<string>();
+                var wrongDifficultyContracts = new List<string>();
                 sim.GetDifficultyRangeForContractPublic(sim.CurSystem, out int minDiff, out int maxDiff);
 
                 foreach (var cid in ModInit.modSettings.RecoveryContractIDs)
@@ -136,47 +146,85 @@ namespace SearchAndRescue
                     {
                         if (tempOverride.difficulty <= maxDiff && tempOverride.difficulty >= minDiff)
                         {
-                            potentialContracts.Add(cid);
-                            ModInit.modLog?.Info?.Write($"[Contract_CompleteContract] - Added {cid} due to difficulty {tempOverride.difficulty} in range {minDiff} - {maxDiff}");
+                            correctDifficultyContracts.Add(cid);
+                            ModInit.modLog?.Info?.Write(
+                                $"[Contract_CompleteContract] - Added {cid} to pool due to difficulty {tempOverride.difficulty} in range {minDiff} - {maxDiff}");
+                        }
+                        else
+                        {
+                            wrongDifficultyContracts.Add(cid);
+                            ModInit.modLog?.Info?.Write(
+                                $"[Contract_CompleteContract] - {cid} has wrong difficulty, adding to fallback list");
                         }
                     }
                 }
-                potentialContracts.Shuffle();
+
+                correctDifficultyContracts.Shuffle();
+                wrongDifficultyContracts.Shuffle();
 
                 foreach (UnitResult unitResult in __instance.PlayerUnitResults)
                 {
                     if (ModState.LostPilotsInfo.ContainsKey(unitResult.pilot.Description.Id))
                     {
-                        biomes.Add(ModState.LostPilotsInfo[unitResult.pilot.pilotDef.Description.Id].PilotBiomeSkin);
+                        //biomes.Add(ModState.LostPilotsInfo[unitResult.pilot.pilotDef.Description.Id].PilotBiomeSkin);
                         string contractName = "";
-                        if (potentialContracts.Count > 0)
+                        if (correctDifficultyContracts.Count > 0)
                         {
                             //contractName = potentialContracts.GetRandomElement();
-                            foreach (var contract in potentialContracts)
+                            foreach (var contract in correctDifficultyContracts)
                             {
                                 var contractOverride = sim.DataManager.ContractOverrides.Get(contract).Copy();
-                                var releasedMapsAndEncountersByContractTypeAndOwnership = MetadataDatabase.Instance.GetReleasedMapsAndEncountersByContractTypeAndOwnership(contractOverride.ContractTypeValue.ID, false);
+                                var releasedMapsAndEncountersByContractTypeAndOwnership =
+                                    MetadataDatabase.Instance.GetReleasedMapsAndEncountersByContractTypeAndOwnership(
+                                        contractOverride.ContractTypeValue.ID, false);
                                 if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
                                 {
                                     contractName = contract;
                                     break;
                                 }
-                                else 
+                                else
                                 {
-                                   ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: no playable contracts for type {contractOverride.contractTypeID}; {contractOverride.ContractTypeValue.ID}.");
+                                    ModInit.modLog?.Info?.Write(
+                                        $"[Contract_CompleteContract]: no playable maps for type {contractOverride.contractTypeID}; {contractOverride.ContractTypeValue.ID}.");
                                 }
                             }
-                            if (string.IsNullOrEmpty(contractName))
-                            {
-                                ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: You did not configure a fallback, and we couldn't find a map for ANY SAR contracts. This will break.");
-                            }
-                            else ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: selected {contractName} from difficulty-appropriate contracts. hopefully.");
                         }
                         else
                         {
-                            contractName = ModInit.modSettings.RecoveryContractIDs.GetRandomElement();
-                            ModInit.modLog?.Info?.Write($"[Contract_CompleteContract]: selected {contractName} from all potential bc we couldnt find anything with right difficulty.");
+
+                            ModInit.modLog?.Info?.Write(
+                                $"[Contract_CompleteContract]: You did not configure a fallback with correct difficulty. Trying again without difficulty constraints.");
+                            {
+                                foreach (var contract in wrongDifficultyContracts)
+                                {
+                                    var contractOverride = sim.DataManager.ContractOverrides.Get(contract).Copy();
+                                    var releasedMapsAndEncountersByContractTypeAndOwnership =
+                                        MetadataDatabase.Instance
+                                            .GetReleasedMapsAndEncountersByContractTypeAndOwnership(
+                                                contractOverride.ContractTypeValue.ID, false);
+                                    if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
+                                    {
+                                        contractName = contract;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        ModInit.modLog?.Info?.Write(
+                                            $"[Contract_CompleteContract]: no playable maps for type {contractOverride.contractTypeID}; {contractOverride.ContractTypeValue.ID}.");
+                                    }
+                                }
+                            }
                         }
+
+                        MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
+                        if (string.IsNullOrEmpty(contractName))
+                        {
+                            contractName = ModInit.modSettings.RecoveryContractIDs.GetRandomElement();
+                            MapRandomizer.ModState.IsSystemActionPatch = null;
+                            ModInit.modLog?.Info?.Write(
+                                $"[Contract_CompleteContract]: Couldn't find biome appropriate map for any recovery contracts, disabling biome enforcement and picking a random contract because you don't read the documentation. This hurts you more than it hurts me.");
+                        }
+
                         var contractData = new SimGameState.AddContractData
                         {
                             ContractName = contractName,
@@ -185,17 +233,24 @@ namespace SearchAndRescue
                             TargetSystem = sim.CurSystem.ID,
                             IsGlobal = true
                         };
-                        MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
-                        sim.AddContract(contractData);
+
+                        var contractAdded = sim.AddContract(contractData);
+                        if (contractAdded != null && string.IsNullOrEmpty(contractAdded?.GUID))
+                        {
+                            contractAdded.SetGuid(Guid.NewGuid().ToString());
+                        }
+
+                        ModState.LostPilotsInfo[unitResult.pilot.Description.Id].RecoveryContractGUID =
+                            contractAdded?.GUID;
                         MapRandomizer.ModState.IsSystemActionPatch = null;
                         ModInit.modLog?.Info?.Write(
-                            $"[Contract_CompleteContract] - {unitResult.pilot.Callsign} MIA; Add contract with AddContractData: contractname: {contractData.ContractName} employer: {contractData.Employer} target:{contractData.Target}, targetsystem:{contractData.TargetSystem}.");
+                            $"[Contract_CompleteContract] - {unitResult.pilot.Callsign} MIA; Add contract with AddContractData: contractname: {contractData.ContractName} employer: {contractData.Employer} target:{contractData.Target}, targetsystem:{contractData.TargetSystem}. Recovery contract GUID {contractAdded?.GUID}");
                     }
                 }
             }
         }
 
-       [HarmonyPatch(typeof(SimGameState), "ResolveCompleteContract", new Type[]{})]
+        [HarmonyPatch(typeof(SimGameState), "ResolveCompleteContract", new Type[] { })]
         public static class SimGameState_ResolveCompleteContract
         {
             public static void Prefix(SimGameState __instance)
@@ -206,40 +261,57 @@ namespace SearchAndRescue
                     var toRemove = new List<string>();
                     foreach (var lostPilotInfo in ModState.LostPilotsInfo)
                     {
-                        if (lostPilotInfo.Value.MissingPilotSystem == __instance.CurSystem.ID)
+                        if (string.IsNullOrEmpty(lostPilotInfo.Value.RecoveryContractGUID))
+                        {
+                            toRemove.Add(lostPilotInfo.Key);
+                            ModInit.modLog?.Error?.Write(
+                                $"[SimGameState_ResolveCompleteContract] - {lostPilotInfo.Key} RecoveryContractGUID was null. This should never happen at this point. tbone has been very bad and you should tell him so.");
+                            continue;
+                        }
+                        ModInit.modLog?.Trace?.Write($"[SimGameState_ResolveCompleteContract] - Checking lostPilotInfo GUID {lostPilotInfo.Value.RecoveryContractGUID} against contract GUID {__instance.CompletedContract.GUID}.");
+
+                        if (lostPilotInfo.Value.RecoveryContractGUID == __instance.CompletedContract.GUID)
                         {
                             var pilotInfo = lostPilotInfo.Value;
                             pilotInfo.MissingPilotDef.DataManager = __instance.DataManager;
                             var pilot = new Pilot(pilotInfo.MissingPilotDef, pilotInfo.PilotSimUID, true);
                             var pilotSon = pilot.pilotDef.ToJSON();
                             var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
+
+                            if (__instance.PilotRoster.Any(x =>
+                                    x.pilotDef.Description.Id == pilotInfo.MissingPilotDef.Description.Id))
+                            {
+                                ModInit.modLog?.Info?.Write(
+                                    $"[SimGameState_ResolveCompleteContract] - pilot {pilot.Callsign} already in roster, aborting. most likely not a new bug, but due to earlier tbone fuckups.");
+                                __instance.CompanyTags.Remove(pilotTag);
+                                toRemove.Add(lostPilotInfo.Key);
+                                continue;
+                            }
+
                             if (__instance.CompletedContract.State == Contract.ContractState.Complete)
                             {
+                                ModInit.modLog?.Info?.Write($"[SimGameState_ResolveCompleteContract] CONTRACT STATE {__instance.CompletedContract.State}");
+
                                 pilot.ForceRefreshDef();
                                 __instance.AddRecoveredPilotToRoster(pilot);
-                                
-                                ModInit.modLog?.Info?.Write(
-                                    $"[SimGameState_ResolveCompleteContract] - adding pilot {pilot.Callsign} to roster from recovery.");
                             }
                             else
                             {
-                                pilot.pilotDef.SetRecentInjuryDamageType(DamageType.Unknown);
-                                pilot.pilotDef.SetDiedInSystemID(lostPilotInfo.Value.MissingPilotSystem);
-                                __instance.Graveyard.Add(pilot);
-                                ModInit.modLog?.Info?.Write($"[Contract_OnDayPassed] - created tag for removal from company.");
+                                ModInit.modLog?.Info?.Write($"[SimGameState_ResolveCompleteContract] CONTRACT STATE {__instance.CompletedContract.State}");
+                                __instance.KillMissingPilot(pilot, lostPilotInfo.Value);
                             }
 
                             __instance.CompanyTags.Remove(pilotTag);
-                            toRemove.Add(pilot.pilotDef.Description.Id);
-                            break; // break; only one recover per contract
+                            toRemove.Add(lostPilotInfo.Key);
+                            break; // break; only one recover per contract. shouldnt matter anymore since we GUID match instead of system match?
                         }
                     }
+
                     foreach (var remove in toRemove)
                     {
                         ModState.LostPilotsInfo.Remove(remove);
                     }
                 }
-
                 // probably create a popup tell you you reocverd them too. might need to use modstate?
 
                 //process loss here
@@ -254,13 +326,16 @@ namespace SearchAndRescue
                             {
                                 ModState.LostPilotsInfo[unitResult.pilot.pilotDef.Description.Id].PilotSimUID =
                                     simPilot.GUID;
-                                ModInit.modLog?.Info?.Write($"[SimGameState_ResolveCompleteContract]: updated {unitResult.pilot.pilotDef.Description.Id} LostPilotInfo SimUID with {simPilot.GUID}");
-                            //    __instance.SerializeMissingPilot(simPilot);
+                                ModInit.modLog?.Info?.Write(
+                                    $"[SimGameState_ResolveCompleteContract]: updated {unitResult.pilot.pilotDef.Description.Id} LostPilotInfo SimUID with {simPilot.GUID}");
+                                //    __instance.SerializeMissingPilot(simPilot);
 
                                 // what do with pilots? if set "away", theyll still get pulled for events and shit. just dismiss them, save info, and add back.
                                 __instance.DismissMissingPilot(simPilot);
-                                __instance.interruptQueue.QueuePauseNotification("Pilot MIA!", $"Although we saw them eject, we were unable to locate {unitResult.pilot.Callsign}'s ejection seat. An SAR mission has been added to the command center.",
-                                        __instance.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue", null, null);
+                                __instance.interruptQueue.QueuePauseNotification("Pilot MIA!",
+                                    $"Although we saw them eject, we were unable to locate {unitResult.pilot.Callsign}'s ejection seat. An SAR mission has been added to the command center.",
+                                    __instance.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue",
+                                    null, null);
                             }
                         }
                     }
@@ -274,6 +349,8 @@ namespace SearchAndRescue
             public static void Postfix(SGCharacterCreationCareerBackgroundSelectionPanel __instance)
             {
                 ModState.InitializeIcon();
+                var sim = UnityGameInstance.BattleTechGame.Simulation;
+                sim.InitializeMissionNames();
             }
         }
 
@@ -293,23 +370,76 @@ namespace SearchAndRescue
             public static void Postfix(SimGameState __instance)
             {
                 ModState.InitializeIcon();
+                __instance.InitializeMissionNames();
                 __instance.DeSerializeMissingPilots();
 
-                var recoveryContracts = __instance.GlobalContracts.FindAll(x => ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID));
-                if (recoveryContracts.Count == ModState.LostPilotsInfo.Count) return;
+                if (ModState.LostPilotsInfo.Values.Any(x => string.IsNullOrEmpty(x.RecoveryContractGUID)))
+                {
+                    ModInit.modLog?.Info?.Write(
+                        $"[SGS_Rehydrate_Patch] - Found LostPilotsInfos with null recovery contract GUID. Trying to nuke recovery contracts and regenerate");
+
+                    if (__instance.GlobalContracts.Count == ModState.LostPilotsInfo.Count)
+                    {
+                        ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - LostPilotsInfos count equal to GlobalContracts count, can safely nuke all Global Contracts. I hope.");
+                        for (int i = __instance.GlobalContracts.Count - 1; i >= 0; i--)
+                        {
+                            ModInit.modLog?.Info?.Write(
+                                $"[SGS_Rehydrate_Patch] - Checking GlobalContract {__instance.GlobalContracts[i].OverrideID} against SAR contract list");
+                            ModInit.modLog?.Info?.Write(
+                                $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {__instance.GlobalContracts[i].Override.ID} and GUID {__instance.GlobalContracts[i].GUID}");
+                            __instance.GlobalContracts.RemoveAt(i);
+                            
+                        }
+                    }
+                    else
+                    {
+                        for (int i = __instance.GlobalContracts.Count - 1; i >= 0; i--)
+                        {
+                            if (ModState.ContractNames.Contains(__instance.GlobalContracts[i].Override.contractName) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.GlobalContracts[i].Override.ID))
+                            {
+                                ModInit.modLog?.Info?.Write(
+                                    $"[SGS_Rehydrate_Patch] - Checking GlobalContract {__instance.GlobalContracts[i].OverrideID} against SAR contract list");
+                                ModInit.modLog?.Info?.Write(
+                                    $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {__instance.GlobalContracts[i].Override.ID} and GUID {__instance.GlobalContracts[i].GUID}");
+                                __instance.GlobalContracts.RemoveAt(i);
+                            }
+                        }
+                    }
+                }
+                var recoveryContracts = __instance.GlobalContracts.FindAll(x =>
+                    ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID));
+
+                var recoveryContractsSystem = __instance.CurSystem.SystemContracts.FindAll(x =>
+                    ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID));
+
+                recoveryContracts.AddRange(recoveryContractsSystem);
+                //if (__instance?.pendingBreadcrumb?.Override?.ID != null && ModInit.modSettings.RecoveryContractIDs.Contains(__instance.pendingBreadcrumb.Override.ID))
+                //{
+                //    recoveryContracts.Add(__instance.pendingBreadcrumb);
+                //}
+
+                //if (__instance?.activeBreadcrumb?.Override?.ID != null && ModInit.modSettings.RecoveryContractIDs.Contains(__instance.activeBreadcrumb.Override.ID))
+               //{
+               //     recoveryContracts.Add(__instance.activeBreadcrumb);
+               //}
+
+                if (recoveryContracts.Count >= ModState.LostPilotsInfo.Count) return;
+                var addedContracts = 0;
 
                 foreach (var missingPilot in ModState.LostPilotsInfo)
                 {
+                    if (recoveryContracts.Count + addedContracts >= ModState.LostPilotsInfo.Count) return;
+
                     var filteredRecoveries = recoveryContracts.FindAll(x =>
                         x.Override.targetTeam.faction == missingPilot.Value.SAR_Opfor &&
                         x.TargetSystemID == missingPilot.Value.MissingPilotSystem);
 
                     if (filteredRecoveries.Count == 0)
                     {
-                        ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - ERROR! We couldn't find a recovery contract for pilot {missingPilot.Value.MissingPilotDef.Description.Callsign}! Trying to generate and inject a new one!");
-                        var potentialContracts = new List<string>();
-                        var system = __instance.GetSystemById(missingPilot.Value.MissingPilotSystem);
-                        __instance.GetDifficultyRangeForContractPublic(system, out int minDiff, out int maxDiff);
+                        var correctDifficultyContracts = new List<string>();
+                        var wrongDifficultyContracts = new List<string>();
+                        __instance.GetDifficultyRangeForContractPublic(__instance.CurSystem, out int minDiff,
+                            out int maxDiff);
 
                         foreach (var cid in ModInit.modSettings.RecoveryContractIDs)
                         {
@@ -318,23 +448,81 @@ namespace SearchAndRescue
                             {
                                 if (tempOverride.difficulty <= maxDiff && tempOverride.difficulty >= minDiff)
                                 {
-                                    potentialContracts.Add(cid);
+                                    correctDifficultyContracts.Add(cid);
                                     ModInit.modLog?.Info?.Write(
                                         $"[SGS_Rehydrate_Patch] - Added {cid} due to difficulty {tempOverride.difficulty} in range {minDiff} - {maxDiff}");
                                 }
+                                else
+                                {
+                                    wrongDifficultyContracts.Add(cid);
+                                    ModInit.modLog?.Info?.Write(
+                                        $"[SGS_Rehydrate_Patch] - {cid} has wrong difficulty, adding to fallback list");
+                                }
                             }
                         }
-                        string contractName;
-                        if (potentialContracts.Count > 0)
+
+                        correctDifficultyContracts.Shuffle();
+                        wrongDifficultyContracts.Shuffle();
+
+                        string contractName = "";
+                        if (correctDifficultyContracts.Count > 0)
                         {
-                            contractName = potentialContracts.GetRandomElement();
-                            ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch]: selected {contractName} from difficulty-appropriate contracts. hopefully.");
+                            //contractName = potentialContracts.GetRandomElement();
+                            foreach (var contract in correctDifficultyContracts)
+                            {
+                                var contractOverride = __instance.DataManager.ContractOverrides.Get(contract).Copy();
+                                var releasedMapsAndEncountersByContractTypeAndOwnership =
+                                    MetadataDatabase.Instance.GetReleasedMapsAndEncountersByContractTypeAndOwnership(
+                                        contractOverride.ContractTypeValue.ID, false);
+                                if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
+                                {
+                                    contractName = contract;
+                                    break;
+                                }
+                                else
+                                {
+                                    ModInit.modLog?.Info?.Write(
+                                        $"[SGS_Rehydrate_Patch]: no playable maps for type {contractOverride.contractTypeID}; {contractOverride.ContractTypeValue.ID}.");
+                                }
+                            }
                         }
                         else
                         {
-                            contractName = ModInit.modSettings.RecoveryContractIDs.GetRandomElement();
-                            ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch]: selected {contractName} from all potential bc we couldnt find anything with right difficulty.");
+
+                            ModInit.modLog?.Info?.Write(
+                                $"[SGS_Rehydrate_Patch]: You did not configure a fallback with correct difficulty. Trying again without difficulty constraints.");
+                            {
+                                foreach (var contract in wrongDifficultyContracts)
+                                {
+                                    var contractOverride =
+                                        __instance.DataManager.ContractOverrides.Get(contract).Copy();
+                                    var releasedMapsAndEncountersByContractTypeAndOwnership =
+                                        MetadataDatabase.Instance
+                                            .GetReleasedMapsAndEncountersByContractTypeAndOwnership(
+                                                contractOverride.ContractTypeValue.ID, false);
+                                    if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
+                                    {
+                                        contractName = contract;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        ModInit.modLog?.Info?.Write(
+                                            $"[SGS_Rehydrate_Patch]: no playable maps for type {contractOverride.contractTypeID}; {contractOverride.ContractTypeValue.ID}.");
+                                    }
+                                }
+                            }
                         }
+
+                        MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
+                        if (string.IsNullOrEmpty(contractName))
+                        {
+                            contractName = ModInit.modSettings.RecoveryContractIDs.GetRandomElement();
+                            MapRandomizer.ModState.IsSystemActionPatch = null;
+                            ModInit.modLog?.Info?.Write(
+                                $"[SGS_Rehydrate_Patch]: Couldn't find biome appropriate map for any recovery contracts, disabling biome enforcement and picking a random contract because you don't read the documentation. This hurts you more than it hurts me.");
+                        }
+
                         var contractData = new SimGameState.AddContractData
                         {
                             ContractName = contractName,
@@ -343,13 +531,34 @@ namespace SearchAndRescue
                             TargetSystem = missingPilot.Value.MissingPilotSystem,
                             IsGlobal = true
                         };
-                        MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
-                        __instance.AddContract(contractData);
-                        MapRandomizer.ModState.IsSystemActionPatch = null;
-                        ModInit.modLog?.Info?.Write(
-                            $"[SGS_Rehydrate_Patch] - {missingPilot.Value.MissingPilotDef.Description.Callsign} MIA; Add contract with AddContractData: contractname: {contractData.ContractName} employer: {contractData.Employer} target:{contractData.Target}, targetsystem:{contractData.TargetSystem}.");
-                    }
+                        var contractAdded = __instance.AddContract(contractData);
+                        if (contractAdded != null && string.IsNullOrEmpty(contractAdded?.GUID))
+                        {
+                            contractAdded.SetGuid(Guid.NewGuid().ToString());
+                        }
 
+                        MapRandomizer.ModState.IsSystemActionPatch = null;
+                        ModState.LostPilotsInfo[missingPilot.Value.MissingPilotDef.Description.Id]
+                            .RecoveryContractGUID = contractAdded?.GUID;
+                        ModInit.modLog?.Info?.Write(
+                            $"[SGS_Rehydrate_Patch] - {missingPilot.Value.MissingPilotDef.Description.Callsign} MIA; Add contract with AddContractData: contractname:" +
+                            $"{contractData.ContractName} employer: {contractData.Employer} target:{contractData.Target}, targetsystem:{contractData.TargetSystem}. Recovery contract GUID {contractAdded?.GUID}.");
+                        addedContracts++;
+                    }
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(ContractOverride), "CopyContractTypeData", new Type[] {typeof(ContractOverride)})]
+        public static class ContractOverride_CopyContractTypeData
+        {
+            public static void Postfix(ContractOverride __instance, ContractOverride ovr)
+            {
+                if (ovr != null && ModInit.modSettings.RecoveryContractIDs.Contains(ovr.ID))
+                {
+                    __instance.ID = ovr.ID;
+                    ModInit.modLog?.Info?.Write(
+                        $"[ContractOverride_CopyContractTypeData]: Copied missing Override ID: Instance ID is now {__instance.ID}, source override ID is {ovr.ID}.");
                 }
             }
         }

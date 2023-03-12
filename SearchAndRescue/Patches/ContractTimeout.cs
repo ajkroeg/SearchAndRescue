@@ -55,24 +55,21 @@ namespace SearchAndRescue.Patches
                     var removePilotName = "";
                     foreach (var lostPilotInfo in ModState.LostPilotsInfo)
                     {
-                        if (lostPilotInfo.Value.MissingPilotSystem == __instance.TargetSystem && __instance.ContractBiome == lostPilotInfo.Value.PilotBiomeSkin)
+                        if (lostPilotInfo.Value.RecoveryContractGUID == __instance.GUID) //&& __instance.ContractBiome == lostPilotInfo.Value.PilotBiomeSkin) remove biome stuff, too hard to ensure accuracy
                         {
                             toRemove = lostPilotInfo.Key;
                             removePilotName = lostPilotInfo.Value.MissingPilotDef.Description.Callsign;
                             var pilotDef = lostPilotInfo.Value.MissingPilotDef;
-                            var biomeTag = $"{GlobalVars.SAR_BiomePrefix}{lostPilotInfo.Value.PilotBiomeSkin}";
+                            //var biomeTag = $"{GlobalVars.SAR_BiomePrefix}{lostPilotInfo.Value.PilotBiomeSkin}";
                             var systemTag = $"{GlobalVars.SAR_SystemPrefix}{lostPilotInfo.Value.MissingPilotSystem}";
                             var pilotUIDTag = $"{GlobalVars.SAR_PilotSimUIDPrefix}{lostPilotInfo.Value.PilotSimUID}";
-                            pilotDef.PilotTags.Add(biomeTag);
+                            //pilotDef.PilotTags.Add(biomeTag);
                             pilotDef.PilotTags.Add(systemTag);
                             pilotDef.PilotTags.Add(pilotUIDTag);
                             var pilotSon = pilotDef.ToJSON();
                             var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
-                            pilotDef.SetRecentInjuryDamageType(DamageType.Unknown);
-                            pilotDef.SetDiedInSystemID(lostPilotInfo.Value.MissingPilotSystem);
                             var pilot = new Pilot(pilotDef, lostPilotInfo.Value.PilotSimUID, true);
-                            sim.Graveyard.Add(pilot);
-
+                            sim.KillMissingPilot(pilot, lostPilotInfo.Value);
                             ModInit.modLog?.Info?.Write($"[Contract_OnDayPassed] - created tag for removal from company.");
                             sim.CompanyTags.Remove(pilotTag);
                             break;
