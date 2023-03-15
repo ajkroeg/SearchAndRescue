@@ -405,8 +405,8 @@ namespace SearchAndRescue
                         }
                     }
 
-                    if (__instance.CurSystem.ID == __instance.ActiveTravelContract.TargetSystem && (ModState.ContractNames.Contains(__instance.ActiveTravelContract.Override.contractName) ||
-                        ModInit.modSettings.RecoveryContractIDs.Contains(__instance.ActiveTravelContract.Override.ID)))
+                    if (__instance.ActiveTravelContract != null && (__instance.CurSystem.ID == __instance.ActiveTravelContract?.TargetSystem && (ModState.ContractNames.Contains(__instance.ActiveTravelContract.Override.contractName) ||
+                        ModInit.modSettings.RecoveryContractIDs.Contains(__instance.ActiveTravelContract.Override.ID))))
                     {
                         __instance.ClearBreadcrumb();
                         ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - Active travel contract was SAR in current system, clearing it");
