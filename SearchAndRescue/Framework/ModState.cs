@@ -26,6 +26,9 @@ namespace SearchAndRescue.Framework
         public static Dictionary<string, MissingPilotInfo> LostPilotsInfo = new Dictionary<string, MissingPilotInfo>();
         public static bool CompleteContractRunOnce = false;
         public static List<string> ContractNames = new List<string>();
+
+        public static string NonProceduralContractGUID = "";
+
         public static void InitializeIcon()
         {
             DataManager dm = UnityGameInstance.BattleTechGame.DataManager;

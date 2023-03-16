@@ -12,6 +12,7 @@ using SearchAndRescue.Framework;
 using UnityEngine.UI;
 using ModState = SearchAndRescue.Framework.ModState;
 using BattleTech.Data;
+using Steamworks;
 
 namespace SearchAndRescue
 {
@@ -118,6 +119,38 @@ namespace SearchAndRescue
             }
         }
 
+        [HarmonyPatch(typeof(Contract), "GUID", MethodType.Getter)]
+        public static class Contract_GUID_Getter
+        {
+            static bool Prepare() => ModInit.modSettings.enableDebug;
+
+            public static void Postfix(Contract __instance, ref string __result)
+            {
+                if (__instance == null) return;
+                if (__instance.Override == null) return;
+                __instance?.Override.FullRehydrate();
+                if (__instance.Name == null) return;
+                if (ModState.ContractNames.Contains(__instance.Name) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.Override.ID))
+                    ModInit.modLog?.Info?.Write($"[Contract_GUID_Getter] getter for {__instance?.Name} {__instance?.Override?.ID} got {__result}. Called by {Environment.StackTrace.ToString()}");
+            }
+        }
+
+        [HarmonyPatch(typeof(Contract), "GUID", MethodType.Setter)]
+        public static class Contract_GUID_Setter
+        {
+            static bool Prepare() => ModInit.modSettings.enableDebug;
+
+            public static void Postfix(Contract __instance, string value)
+            {
+                if (__instance == null) return;
+                if (__instance.Override == null) return;
+                __instance?.Override.FullRehydrate();
+                if (__instance.Name == null) return;
+                if (ModState.ContractNames.Contains(__instance.Name) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.Override.ID))
+                    ModInit.modLog?.Info?.Write($"[Contract_GUID_Setter] Setter for {__instance?.Name} {__instance?.Override?.ID} set {value}. Called by {Environment.StackTrace.ToString()}");
+            }
+        }
+
         [HarmonyPatch(typeof(Contract), "CompleteContract", new Type[] {typeof(MissionResult), typeof(bool)})]
         public static class Contract_CompleteContract
         {
@@ -125,6 +158,8 @@ namespace SearchAndRescue
 
             public static void Postfix(Contract __instance)
             {
+                ModInit.modLog?.Info?.Write(
+                    $"[Contract_CompleteContract] contraact guid? {__instance.GUID}");
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
                 if (ModState.CompleteContractRunOnce) return;
@@ -191,27 +226,24 @@ namespace SearchAndRescue
                         }
                         else
                         {
-
                             ModInit.modLog?.Info?.Write(
                                 $"[Contract_CompleteContract]: You did not configure a fallback with correct difficulty. Trying again without difficulty constraints.");
+                            foreach (var contract in wrongDifficultyContracts)
                             {
-                                foreach (var contract in wrongDifficultyContracts)
+                                var contractOverride = sim.DataManager.ContractOverrides.Get(contract).Copy();
+                                var releasedMapsAndEncountersByContractTypeAndOwnership =
+                                    MetadataDatabase.Instance
+                                        .GetReleasedMapsAndEncountersByContractTypeAndOwnership(
+                                            contractOverride.ContractTypeValue.ID, false);
+                                if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
                                 {
-                                    var contractOverride = sim.DataManager.ContractOverrides.Get(contract).Copy();
-                                    var releasedMapsAndEncountersByContractTypeAndOwnership =
-                                        MetadataDatabase.Instance
-                                            .GetReleasedMapsAndEncountersByContractTypeAndOwnership(
-                                                contractOverride.ContractTypeValue.ID, false);
-                                    if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
-                                    {
-                                        contractName = contract;
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        ModInit.modLog?.Info?.Write(
-                                            $"[Contract_CompleteContract]: no playable maps for type {contractOverride.contractTypeID}; {contractOverride.ContractTypeValue.ID}.");
-                                    }
+                                    contractName = contract;
+                                    break;
+                                }
+                                else
+                                {
+                                    ModInit.modLog?.Info?.Write(
+                                        $"[Contract_CompleteContract]: no playable maps for type {contractOverride.contractTypeID}; {contractOverride.ContractTypeValue.ID}.");
                                 }
                             }
                         }
@@ -237,11 +269,11 @@ namespace SearchAndRescue
                         var contractAdded = sim.AddContract(contractData);
                         if (contractAdded != null && string.IsNullOrEmpty(contractAdded?.GUID))
                         {
-                            contractAdded.SetGuid(Guid.NewGuid().ToString());
+                            //contractAdded.SetGuid(Guid.NewGuid().ToString());
                         }
 
                         ModState.LostPilotsInfo[unitResult.pilot.Description.Id].RecoveryContractGUID =
-                            contractAdded?.GUID;
+                            contractAdded?.GUID; // i think this wont work. may also need to make sure it puts contract in save bits? maybe not, maybe just patch addtravel
                         MapRandomizer.ModState.IsSystemActionPatch = null;
                         ModInit.modLog?.Info?.Write(
                             $"[Contract_CompleteContract] - {unitResult.pilot.Callsign} MIA; Add contract with AddContractData: contractname: {contractData.ContractName} employer: {contractData.Employer} target:{contractData.Target}, targetsystem:{contractData.TargetSystem}. Recovery contract GUID {contractAdded?.GUID}");
@@ -255,9 +287,12 @@ namespace SearchAndRescue
         {
             public static void Prefix(SimGameState __instance)
             {
+                ModInit.modLog?.Debug?.Write($"[SimGameState_ResolveCompleteContract] enter SimGameState_ResolveCompleteContract");
                 //process recovery here
-                if (ModInit.modSettings.RecoveryContractIDs.Contains(__instance.CompletedContract.Override.ID))
+                __instance.CompletedContract.Override.FullRehydrate();
+                if (ModInit.modSettings.RecoveryContractIDs.Contains(__instance.CompletedContract.Override.ID) || ModState.ContractNames.Contains(__instance.CompletedContract.Override.contractName))
                 {
+                    ModInit.modLog?.Info?.Write($"[SimGameState_ResolveCompleteContract] found matching ID or Name for SAR contract");
                     var toRemove = new List<string>();
                     foreach (var lostPilotInfo in ModState.LostPilotsInfo)
                     {
@@ -312,6 +347,7 @@ namespace SearchAndRescue
                         ModState.LostPilotsInfo.Remove(remove);
                     }
                 }
+                ModInit.modLog?.Info?.Write($"[SimGameState_ResolveCompleteContract] post recovery SimGameState_ResolveCompleteContract");
                 // probably create a popup tell you you reocverd them too. might need to use modstate?
 
                 //process loss here
@@ -337,6 +373,90 @@ namespace SearchAndRescue
                                     __instance.GetCrewPortrait(SimGameCrew.Crew_Darius), "", null, "Continue",
                                     null, null);
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(SimGameState), "FinishCompleteBreadcrumbProcess", new Type[] {})]
+        public static class SimGameState_FinishCompleteBreadcrumbProcess
+        {
+            public static void Prefix(SimGameState __instance)
+            {
+                if (__instance.activeBreadcrumb.Override.OnContractSuccessResults != null)
+                {
+                    foreach (SimGameEventResult simGameEventResult in __instance.activeBreadcrumb.Override.OnContractSuccessResults)
+                    {
+                        if (simGameEventResult.Actions != null)
+                        {
+                            SimGameResultAction[] actions = simGameEventResult.Actions;
+                            for (int i = 0; i < actions.Length; i++)
+                            {
+                                if (actions[i].Type == SimGameResultAction.ActionType.System_StartNonProceduralContract)
+                                {
+                                    ModState.NonProceduralContractGUID = __instance.activeBreadcrumb.GUID;
+                                    ModInit.modLog?.Info?.Write($"[SimGameState_FinishCompleteBreadcrumbProcess] stored NonProcedural breadcrumb GUID to modstate {ModState.NonProceduralContractGUID}");
+                                }
+                            }
+                        }
+                        
+                    }
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(SimGameState), "AddPredefinedContract2", new Type[] {typeof(SimGameState.AddContractData)})]
+        public static class SimGameState_AddPredefinedContract2 //need to make sure travel contracts get a GUID
+        {
+            public static void Postfix(SimGameState __instance, SimGameState.AddContractData contractData,
+                ref Contract __result)
+            {
+                if (!contractData.IsGlobal) return;
+                if (__result == null) return;
+
+                if (string.IsNullOrEmpty(__result.GUID))
+                {
+                    if (!string.IsNullOrEmpty(contractData.SaveGuid))
+                    {
+                        __result.SetGuid(contractData.SaveGuid);
+                        ModInit.modLog?.Info?.Write($"[SimGameState_AddPredefinedContract2] contract had saveGUID {__result.GUID}");
+                    }
+                    else if (!string.IsNullOrEmpty(ModState.NonProceduralContractGUID))
+                    {
+                        __result.SetGuid(ModState.NonProceduralContractGUID);
+                        ModInit.modLog?.Info?.Write($"[SimGameState_AddPredefinedContract2] found Modstate GUID, set to {__result.GUID} and clearing state");
+                        ModState.NonProceduralContractGUID = "";
+                    }
+                    else
+                    {
+                        __result.SetGuid(Guid.NewGuid().ToString());
+                        ModInit.modLog?.Info?.Write($"[SimGameState_AddPredefinedContract2] contract had no GUID, generated new one {__result.GUID}");
+                    }
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(SimGameState), "AddContract", new Type[]{typeof(SimGameState.AddContractData)})]
+        public static class SimGameState_AddContract //need to make sure travel contracts get a GUID
+        {
+            public static void Postfix(SimGameState __instance, SimGameState.AddContractData contractData, ref Contract __result)
+            {
+                {
+                    if (!contractData.IsGlobal) return;
+                    if (__result == null) return;
+
+                    if (string.IsNullOrEmpty(__result.GUID))
+                    {
+                        if (!string.IsNullOrEmpty(contractData.SaveGuid))
+                        {
+                            __result.SetGuid(contractData.SaveGuid);
+                            ModInit.modLog?.Info?.Write($"[SimGameState_AddContract] contract had saveGUID {__result.GUID}");
+                        }
+                        else
+                        {
+                            __result.SetGuid(Guid.NewGuid().ToString());
+                            ModInit.modLog?.Info?.Write($"[SimGameState_AddContract] contract had no GUID, generated new one {__result.GUID}");
                         }
                     }
                 }
@@ -384,8 +504,6 @@ namespace SearchAndRescue
                         for (int i = __instance.GlobalContracts.Count - 1; i >= 0; i--)
                         {
                             ModInit.modLog?.Info?.Write(
-                                $"[SGS_Rehydrate_Patch] - Checking GlobalContract {__instance.GlobalContracts[i].OverrideID} against SAR contract list");
-                            ModInit.modLog?.Info?.Write(
                                 $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {__instance.GlobalContracts[i].Override.ID} and GUID {__instance.GlobalContracts[i].GUID}");
                             __instance.GlobalContracts.RemoveAt(i);
                         }
@@ -394,6 +512,7 @@ namespace SearchAndRescue
                     {
                         for (int i = __instance.GlobalContracts.Count - 1; i >= 0; i--)
                         {
+                            __instance.GlobalContracts[i].Override.FullRehydrate();
                             if (ModState.ContractNames.Contains(__instance.GlobalContracts[i].Override.contractName) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.GlobalContracts[i].Override.ID))
                             {
                                 ModInit.modLog?.Info?.Write(
@@ -405,20 +524,45 @@ namespace SearchAndRescue
                         }
                     }
 
-                    if (__instance.ActiveTravelContract != null && (__instance.CurSystem.ID == __instance.ActiveTravelContract?.TargetSystem && (ModState.ContractNames.Contains(__instance.ActiveTravelContract.Override.contractName) ||
-                        ModInit.modSettings.RecoveryContractIDs.Contains(__instance.ActiveTravelContract.Override.ID))))
+                    for (int i = __instance.CurSystem.SystemContracts.Count - 1; i >= 0; i--)
                     {
-                        __instance.ClearBreadcrumb();
-                        ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - Active travel contract was SAR in current system, clearing it");
+                        __instance.CurSystem.SystemContracts[i].Override.FullRehydrate();
+                        if (ModState.ContractNames.Contains(__instance.CurSystem.SystemContracts[i].Override.contractName) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.CurSystem.SystemContracts[i].Override.ID))
+                        {
+                            ModInit.modLog?.Info?.Write(
+                                $"[SGS_Rehydrate_Patch] - Checking system contract {__instance.CurSystem.SystemContracts[i].OverrideID} against SAR contract list");
+                            ModInit.modLog?.Info?.Write(
+                                $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {__instance.CurSystem.SystemContracts[i].Override.ID} and GUID {__instance.CurSystem.SystemContracts[i].GUID}");
+                            __instance.CurSystem.SystemContracts.RemoveAt(i);
+                        }
+                    }
+
+                    if (__instance.ActiveTravelContract != null)
+                    {
+                        __instance.ActiveTravelContract.Override.FullRehydrate();
+                        if (__instance.CurSystem.ID == __instance.ActiveTravelContract.TargetSystem && (ModState.ContractNames.Contains(__instance.ActiveTravelContract.Override.contractName) ||
+                                ModInit.modSettings.RecoveryContractIDs.Contains(__instance.ActiveTravelContract.Override.ID)))
+                        {
+                            __instance.ClearBreadcrumb();
+                            ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - Active travel contract was SAR in current system, clearing it");
+                        }
                     }
                 }
-                var recoveryContracts = __instance.GlobalContracts.FindAll(x =>
-                    ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID));
+                var recoveryContractsGlobal = __instance.GlobalContracts.FindAll(x =>
+                    ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID) || ModState.ContractNames.Contains(x.Override.contractName));
 
-                var recoveryContractsSystem = __instance.CurSystem.SystemContracts.FindAll(x =>
-                    ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID));
+                var recoveryContractsSystem = __instance.CurSystem.SystemContracts.FindAll(x => ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID) || ModState.ContractNames.Contains(x.Override.contractName));
 
-                recoveryContracts.AddRange(recoveryContractsSystem);
+                recoveryContractsGlobal.AddRange(recoveryContractsSystem);
+                //foreach (var globalContract in recoveryContractsGlobal)
+               // {
+               //     ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - Checking for duplicate GUID between global contracts and system contract with name {globalContract.Name} and GUID {systemContract.GUID}");
+               //     if (recoveryContractsSystem.Any(x => x.GUID != globalContract.GUID))
+               //     {
+               //         recoveryContractsGlobal.Add(globalContract);
+               //         ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - duplicate not found");
+               //     }
+               // }
                 //if (__instance?.pendingBreadcrumb?.Override?.ID != null && ModInit.modSettings.RecoveryContractIDs.Contains(__instance.pendingBreadcrumb.Override.ID))
                 //{
                 //    recoveryContracts.Add(__instance.pendingBreadcrumb);
@@ -429,14 +573,18 @@ namespace SearchAndRescue
                //     recoveryContracts.Add(__instance.activeBreadcrumb);
                //}
 
-                if (recoveryContracts.Count >= ModState.LostPilotsInfo.Count) return;
+               if (recoveryContractsGlobal.Count >= ModState.LostPilotsInfo.Count)
+               {
+                   ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - recoveryContractsGlobal.Count {recoveryContractsGlobal.Count} >= ModState.LostPilotsInfo.Count {ModState.LostPilotsInfo.Count}");
+                   return;
+               }
                 var addedContracts = 0;
 
                 foreach (var missingPilot in ModState.LostPilotsInfo)
                 {
-                    if (recoveryContracts.Count + addedContracts >= ModState.LostPilotsInfo.Count) return;
+                    if (recoveryContractsGlobal.Count + addedContracts >= ModState.LostPilotsInfo.Count) return;
 
-                    var filteredRecoveries = recoveryContracts.FindAll(x =>
+                    var filteredRecoveries = recoveryContractsGlobal.FindAll(x =>
                         x.Override.targetTeam.faction == missingPilot.Value.SAR_Opfor &&
                         x.TargetSystemID == missingPilot.Value.MissingPilotSystem);
 
@@ -540,7 +688,7 @@ namespace SearchAndRescue
                         var contractAdded = __instance.AddContract(contractData);
                         if (contractAdded != null && string.IsNullOrEmpty(contractAdded?.GUID))
                         {
-                            contractAdded.SetGuid(Guid.NewGuid().ToString());
+                            //contractAdded.SetGuid(Guid.NewGuid().ToString());
                         }
 
                         MapRandomizer.ModState.IsSystemActionPatch = null;
@@ -558,6 +706,7 @@ namespace SearchAndRescue
         [HarmonyPatch(typeof(ContractOverride), "CopyContractTypeData", new Type[] {typeof(ContractOverride)})]
         public static class ContractOverride_CopyContractTypeData
         {
+            static bool Prepare() => false; //disable; just need to rehyrate overrides when checking
             public static void Postfix(ContractOverride __instance, ContractOverride ovr)
             {
                 if (ovr != null && ModInit.modSettings.RecoveryContractIDs.Contains(ovr.ID))

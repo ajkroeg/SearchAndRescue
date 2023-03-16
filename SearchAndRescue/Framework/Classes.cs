@@ -96,7 +96,7 @@ namespace SearchAndRescue.Framework
                     var filtered = new List<ContractOverride>();
                     foreach (var contractOverride in type.Value)
                     {
-                        if (ModInit.modSettings.RecoveryContractIDs.Contains(contractOverride.ID))
+                        if (ModInit.modSettings.RecoveryContractIDs.Contains(contractOverride.ID) || ModState.ContractNames.Contains(contractOverride.contractName))
                         {
                             filtered.Add(contractOverride);
                         }
