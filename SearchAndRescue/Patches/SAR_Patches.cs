@@ -163,6 +163,7 @@ namespace SearchAndRescue
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
                 if (ModState.CompleteContractRunOnce) return;
+                MapRandomizer.ModState.AddContractBiomes = sim.CurSystem.Def.SupportedBiomes;
                 ModState.CompleteContractRunOnce = true;
                 //var biomes = new List<Biome.BIOMESKIN>();
                 var targetFaction =
@@ -209,6 +210,7 @@ namespace SearchAndRescue
                             foreach (var contract in correctDifficultyContracts)
                             {
                                 var contractOverride = sim.DataManager.ContractOverrides.Get(contract).Copy();
+                                
                                 var releasedMapsAndEncountersByContractTypeAndOwnership =
                                     MetadataDatabase.Instance.GetReleasedMapsAndEncountersByContractTypeAndOwnership(
                                         contractOverride.ContractTypeValue.ID, false);
@@ -279,6 +281,7 @@ namespace SearchAndRescue
                             $"[Contract_CompleteContract] - {unitResult.pilot.Callsign} MIA; Add contract with AddContractData: contractname: {contractData.ContractName} employer: {contractData.Employer} target:{contractData.Target}, targetsystem:{contractData.TargetSystem}. Recovery contract GUID {contractAdded?.GUID}");
                     }
                 }
+                MapRandomizer.ModState.AddContractBiomes = new List<Biome.BIOMESKIN>();
             }
         }
 
@@ -492,7 +495,6 @@ namespace SearchAndRescue
                 ModState.InitializeIcon();
                 __instance.InitializeMissionNames();
                 __instance.DeSerializeMissingPilots();
-
                 if (ModState.LostPilotsInfo.Values.Any(x => string.IsNullOrEmpty(x.RecoveryContractGUID)))
                 {
                     ModInit.modLog?.Info?.Write(
@@ -617,10 +619,12 @@ namespace SearchAndRescue
 
                         correctDifficultyContracts.Shuffle();
                         wrongDifficultyContracts.Shuffle();
-
                         string contractName = "";
                         if (correctDifficultyContracts.Count > 0)
                         {
+                            var targetSystem = __instance.GetSystemById(missingPilot.Value.MissingPilotSystem);
+                            ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - trying to generate contracts for system {targetSystem.Name} with available biomes {string.Join("; ", targetSystem.Def.SupportedBiomes)}");
+                            MapRandomizer.ModState.AddContractBiomes = __instance.CurSystem.Def.SupportedBiomes;
                             //contractName = potentialContracts.GetRandomElement();
                             foreach (var contract in correctDifficultyContracts)
                             {
@@ -630,6 +634,8 @@ namespace SearchAndRescue
                                         contractOverride.ContractTypeValue.ID, false);
                                 if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
                                 {
+                                    ModInit.modLog?.Info?.Write(
+                                        $"[SGS_Rehydrate_Patch]: Found usable map with GetReleasedMapsAndEncountersByContractTypeAndOwnership, setting contract to {contract}.");
                                     contractName = contract;
                                     break;
                                 }
@@ -656,6 +662,8 @@ namespace SearchAndRescue
                                                 contractOverride.ContractTypeValue.ID, false);
                                     if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
                                     {
+                                        ModInit.modLog?.Info?.Write(
+                                            $"[SGS_Rehydrate_Patch]: Found usable map with GetReleasedMapsAndEncountersByContractTypeAndOwnership, setting contract to {contract}.");
                                         contractName = contract;
                                         break;
                                     }
@@ -686,10 +694,6 @@ namespace SearchAndRescue
                             IsGlobal = true
                         };
                         var contractAdded = __instance.AddContract(contractData);
-                        if (contractAdded != null && string.IsNullOrEmpty(contractAdded?.GUID))
-                        {
-                            //contractAdded.SetGuid(Guid.NewGuid().ToString());
-                        }
 
                         MapRandomizer.ModState.IsSystemActionPatch = null;
                         ModState.LostPilotsInfo[missingPilot.Value.MissingPilotDef.Description.Id]
@@ -700,6 +704,7 @@ namespace SearchAndRescue
                         addedContracts++;
                     }
                 }
+                MapRandomizer.ModState.AddContractBiomes = new List<Biome.BIOMESKIN>();
             }
         }
 
