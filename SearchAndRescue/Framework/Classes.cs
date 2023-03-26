@@ -68,7 +68,7 @@ namespace SearchAndRescue.Framework
                 enemies.Add(Target.Name);
                 Employer.FactionDef.Enemies = enemies.ToArray();//Traverse.Create(Employer.FactionDef).Property("Enemies").SetValue(enemies.ToArray());
 
-                ModInit.modLog.Debug?.Write($"AddRecoveryContract: SimGameMode {Sim.SimGameMode}, GlobalDifficulty {Sim.GlobalDifficulty}");
+                ModInit.modLog.Trace?.Write($"AddRecoveryContract: SimGameMode {Sim.SimGameMode}, GlobalDifficulty {Sim.GlobalDifficulty}");
                 var difficultyRange = Sim.GetContractRangeDifficultyRange(StarSystemSystem, Sim.SimGameMode, Sim.GlobalDifficulty);//.Invoke(Sim, new object[] {  });
 
                 //Type Diff = difficultyRange.GetType();
@@ -84,7 +84,7 @@ namespace SearchAndRescue.Framework
                 //int maxClamped = (int)AccessTools.Field(Diff, "MaxDifficultyClamped").GetValue(difficultyRange);
                 //AccessTools.Field(Diff, "MaxDifficultyClamped").SetValue(difficultyRange, ContractDifficulty.Hard);
                 difficultyRange.MaxDifficultyClamped = ContractDifficulty.Hard;
-                ModInit.modLog.Debug?.Write($"AddRecoveryContract difficultyRange: MinDifficulty 1, MaxDifficulty 100, MinClamped {ContractDifficulty.INVALID_UNSET}, MaxClamped {ContractDifficulty.Hard}");
+                ModInit.modLog.Trace?.Write($"AddRecoveryContract difficultyRange: MinDifficulty 1, MaxDifficulty 100, MinClamped {ContractDifficulty.INVALID_UNSET}, MaxClamped {ContractDifficulty.Hard}");
 
                 var validTypes = new int[] { (int)ContractType.Rescue }; // force only Rescue types
 
@@ -117,17 +117,17 @@ namespace SearchAndRescue.Framework
 
                 if (!(bool)Sim.HasValidMaps(StarSystemSystem, playableMaps))//.Invoke(Sim, new object[] { StarSystemSystem, playableMaps }))
                 {
-                    ModInit.modLog.Debug?.Write($"AddRecoveryContract - false _hasValidMaps");
+                    ModInit.modLog.Trace?.Write($"AddRecoveryContract - false _hasValidMaps");
                     return;
                 }
                 else if (!(bool)Sim.HasValidContracts(difficultyRange, filteredContractsByType))//Invoke(Sim, new object[] { difficultyRange, filteredContractsByType }))
                 {
-                    ModInit.modLog.Debug?.Write($"AddRecoveryContract - false _hasValidContracts");
+                    ModInit.modLog.Trace?.Write($"AddRecoveryContract - false _hasValidContracts");
                     return;
                 }
                 else if (!(bool)Sim.HasValidParticipants(StarSystemSystem, validParticipants))//.Invoke(Sim, new object[] { StarSystemSystem, validParticipants }))
                 {
-                    ModInit.modLog.Debug?.Write($"AddRecoveryContract - false _hasValidParticipants");
+                    ModInit.modLog.Trace?.Write($"AddRecoveryContract - false _hasValidParticipants");
                     return;
                 }
                 Sim.ClearUsedBiomeFromDiscardPile(playableMaps);

@@ -122,7 +122,7 @@ namespace SearchAndRescue
         [HarmonyPatch(typeof(Contract), "GUID", MethodType.Getter)]
         public static class Contract_GUID_Getter
         {
-            static bool Prepare() => ModInit.modSettings.enableDebug;
+            static bool Prepare() => ModInit.modSettings.enableTrace;
 
             public static void Postfix(Contract __instance, ref string __result)
             {
@@ -138,7 +138,7 @@ namespace SearchAndRescue
         [HarmonyPatch(typeof(Contract), "GUID", MethodType.Setter)]
         public static class Contract_GUID_Setter
         {
-            static bool Prepare() => ModInit.modSettings.enableDebug;
+            static bool Prepare() => ModInit.modSettings.enableTrace;
 
             public static void Postfix(Contract __instance, string value)
             {
@@ -163,7 +163,6 @@ namespace SearchAndRescue
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
                 if (ModState.CompleteContractRunOnce) return;
-                MapRandomizer.ModState.AddContractBiomes = sim.CurSystem.Def.SupportedBiomes;
                 ModState.CompleteContractRunOnce = true;
                 //var biomes = new List<Biome.BIOMESKIN>();
                 var targetFaction =
@@ -210,11 +209,12 @@ namespace SearchAndRescue
                             foreach (var contract in correctDifficultyContracts)
                             {
                                 var contractOverride = sim.DataManager.ContractOverrides.Get(contract).Copy();
-                                
+                                MapRandomizer.ModState.AddContractBiomes = sim.CurSystem.Def.SupportedBiomes;
+                                MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                                 var releasedMapsAndEncountersByContractTypeAndOwnership =
                                     MetadataDatabase.Instance.GetReleasedMapsAndEncountersByContractTypeAndOwnership(
                                         contractOverride.ContractTypeValue.ID, false);
-                                if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
+                                if (releasedMapsAndEncountersByContractTypeAndOwnership != null && releasedMapsAndEncountersByContractTypeAndOwnership.Count > 0)
                                 {
                                     contractName = contract;
                                     break;
@@ -233,11 +233,14 @@ namespace SearchAndRescue
                             foreach (var contract in wrongDifficultyContracts)
                             {
                                 var contractOverride = sim.DataManager.ContractOverrides.Get(contract).Copy();
+                                MapRandomizer.ModState.AddContractBiomes = sim.CurSystem.Def.SupportedBiomes;
+                                MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                                 var releasedMapsAndEncountersByContractTypeAndOwnership =
                                     MetadataDatabase.Instance
                                         .GetReleasedMapsAndEncountersByContractTypeAndOwnership(
                                             contractOverride.ContractTypeValue.ID, false);
-                                if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
+
+                                if (releasedMapsAndEncountersByContractTypeAndOwnership != null && releasedMapsAndEncountersByContractTypeAndOwnership.Count > 0)
                                 {
                                     contractName = contract;
                                     break;
@@ -249,12 +252,9 @@ namespace SearchAndRescue
                                 }
                             }
                         }
-
-                        MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                         if (string.IsNullOrEmpty(contractName))
                         {
                             contractName = ModInit.modSettings.RecoveryContractIDs.GetRandomElement();
-                            MapRandomizer.ModState.IsSystemActionPatch = null;
                             ModInit.modLog?.Info?.Write(
                                 $"[Contract_CompleteContract]: Couldn't find biome appropriate map for any recovery contracts, disabling biome enforcement and picking a random contract because you don't read the documentation. This hurts you more than it hurts me.");
                         }
@@ -267,7 +267,8 @@ namespace SearchAndRescue
                             TargetSystem = sim.CurSystem.ID,
                             IsGlobal = true
                         };
-
+                        MapRandomizer.ModState.AddContractBiomes = sim.CurSystem.Def.SupportedBiomes;
+                        MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                         var contractAdded = sim.AddContract(contractData);
                         if (contractAdded != null && string.IsNullOrEmpty(contractAdded?.GUID))
                         {
@@ -276,12 +277,12 @@ namespace SearchAndRescue
 
                         ModState.LostPilotsInfo[unitResult.pilot.Description.Id].RecoveryContractGUID =
                             contractAdded?.GUID; // i think this wont work. may also need to make sure it puts contract in save bits? maybe not, maybe just patch addtravel
-                        MapRandomizer.ModState.IsSystemActionPatch = null;
                         ModInit.modLog?.Info?.Write(
                             $"[Contract_CompleteContract] - {unitResult.pilot.Callsign} MIA; Add contract with AddContractData: contractname: {contractData.ContractName} employer: {contractData.Employer} target:{contractData.Target}, targetsystem:{contractData.TargetSystem}. Recovery contract GUID {contractAdded?.GUID}");
                     }
                 }
                 MapRandomizer.ModState.AddContractBiomes = new List<Biome.BIOMESKIN>();
+                MapRandomizer.ModState.IsSystemActionPatch = null;
             }
         }
 
@@ -290,7 +291,7 @@ namespace SearchAndRescue
         {
             public static void Prefix(SimGameState __instance)
             {
-                ModInit.modLog?.Debug?.Write($"[SimGameState_ResolveCompleteContract] enter SimGameState_ResolveCompleteContract");
+                ModInit.modLog?.Trace?.Write($"[SimGameState_ResolveCompleteContract] enter SimGameState_ResolveCompleteContract");
                 //process recovery here
                 __instance.CompletedContract.Override.FullRehydrate();
                 if (ModInit.modSettings.RecoveryContractIDs.Contains(__instance.CompletedContract.Override.ID) || ModState.ContractNames.Contains(__instance.CompletedContract.Override.contractName))
@@ -306,7 +307,7 @@ namespace SearchAndRescue
                                 $"[SimGameState_ResolveCompleteContract] - {lostPilotInfo.Key} RecoveryContractGUID was null. This should never happen at this point. tbone has been very bad and you should tell him so.");
                             continue;
                         }
-                        ModInit.modLog?.Trace?.Write($"[SimGameState_ResolveCompleteContract] - Checking lostPilotInfo GUID {lostPilotInfo.Value.RecoveryContractGUID} against contract GUID {__instance.CompletedContract.GUID}.");
+                        ModInit.modLog?.Info?.Write($"[SimGameState_ResolveCompleteContract] - Checking lostPilotInfo GUID {lostPilotInfo.Value.RecoveryContractGUID} against contract GUID {__instance.CompletedContract.GUID}.");
 
                         if (lostPilotInfo.Value.RecoveryContractGUID == __instance.CompletedContract.GUID)
                         {
@@ -556,35 +557,24 @@ namespace SearchAndRescue
                 var recoveryContractsSystem = __instance.CurSystem.SystemContracts.FindAll(x => ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID) || ModState.ContractNames.Contains(x.Override.contractName));
 
                 recoveryContractsGlobal.AddRange(recoveryContractsSystem);
-                //foreach (var globalContract in recoveryContractsGlobal)
-               // {
-               //     ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - Checking for duplicate GUID between global contracts and system contract with name {globalContract.Name} and GUID {systemContract.GUID}");
-               //     if (recoveryContractsSystem.Any(x => x.GUID != globalContract.GUID))
-               //     {
-               //         recoveryContractsGlobal.Add(globalContract);
-               //         ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - duplicate not found");
-               //     }
-               // }
-                //if (__instance?.pendingBreadcrumb?.Override?.ID != null && ModInit.modSettings.RecoveryContractIDs.Contains(__instance.pendingBreadcrumb.Override.ID))
-                //{
-                //    recoveryContracts.Add(__instance.pendingBreadcrumb);
-                //}
 
-                //if (__instance?.activeBreadcrumb?.Override?.ID != null && ModInit.modSettings.RecoveryContractIDs.Contains(__instance.activeBreadcrumb.Override.ID))
-               //{
-               //     recoveryContracts.Add(__instance.activeBreadcrumb);
-               //}
-
-               if (recoveryContractsGlobal.Count >= ModState.LostPilotsInfo.Count)
-               {
-                   ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - recoveryContractsGlobal.Count {recoveryContractsGlobal.Count} >= ModState.LostPilotsInfo.Count {ModState.LostPilotsInfo.Count}");
-                   return;
-               }
+                if (recoveryContractsGlobal.Count >= ModState.LostPilotsInfo.Count)
+                {
+                    MapRandomizer.ModState.IsSystemActionPatch = null;
+                    MapRandomizer.ModState.AddContractBiomes = new List<Biome.BIOMESKIN>();
+                    ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - recoveryContractsGlobal.Count {recoveryContractsGlobal.Count} >= ModState.LostPilotsInfo.Count {ModState.LostPilotsInfo.Count}");
+                    return;
+                }
                 var addedContracts = 0;
-
                 foreach (var missingPilot in ModState.LostPilotsInfo)
                 {
-                    if (recoveryContractsGlobal.Count + addedContracts >= ModState.LostPilotsInfo.Count) return;
+                    var targetSystem = __instance.GetSystemById(missingPilot.Value.MissingPilotSystem);
+                    if (recoveryContractsGlobal.Count + addedContracts >= ModState.LostPilotsInfo.Count)
+                    {
+                        MapRandomizer.ModState.IsSystemActionPatch = null;
+                        MapRandomizer.ModState.AddContractBiomes = new List<Biome.BIOMESKIN>();
+                        return;
+                    }
 
                     var filteredRecoveries = recoveryContractsGlobal.FindAll(x =>
                         x.Override.targetTeam.faction == missingPilot.Value.SAR_Opfor &&
@@ -617,22 +607,27 @@ namespace SearchAndRescue
                             }
                         }
 
+                        ModInit.modLog?.Trace?.Write($"[SGS_Rehydrate_Patch] - order of correct diff contracts before shuffle {string.Join("; ", correctDifficultyContracts)}");
+                        ModInit.modLog?.Trace?.Write($"[SGS_Rehydrate_Patch] - order of wrong  diff contracts before shuffle {string.Join("; ", wrongDifficultyContracts)}");
                         correctDifficultyContracts.Shuffle();
                         wrongDifficultyContracts.Shuffle();
+                        ModInit.modLog?.Trace?.Write($"[SGS_Rehydrate_Patch] - order of correct diff contracts after shuffle {string.Join("; ", correctDifficultyContracts)}");
+                        ModInit.modLog?.Trace?.Write($"[SGS_Rehydrate_Patch] - order of wrong  diff contracts after shuffle {string.Join("; ", wrongDifficultyContracts)}");
+
                         string contractName = "";
                         if (correctDifficultyContracts.Count > 0)
                         {
-                            var targetSystem = __instance.GetSystemById(missingPilot.Value.MissingPilotSystem);
                             ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - trying to generate contracts for system {targetSystem.Name} with available biomes {string.Join("; ", targetSystem.Def.SupportedBiomes)}");
-                            MapRandomizer.ModState.AddContractBiomes = __instance.CurSystem.Def.SupportedBiomes;
                             //contractName = potentialContracts.GetRandomElement();
                             foreach (var contract in correctDifficultyContracts)
                             {
                                 var contractOverride = __instance.DataManager.ContractOverrides.Get(contract).Copy();
+                                MapRandomizer.ModState.AddContractBiomes = targetSystem.Def.SupportedBiomes;
+                                MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                                 var releasedMapsAndEncountersByContractTypeAndOwnership =
                                     MetadataDatabase.Instance.GetReleasedMapsAndEncountersByContractTypeAndOwnership(
                                         contractOverride.ContractTypeValue.ID, false);
-                                if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
+                                if (releasedMapsAndEncountersByContractTypeAndOwnership != null && releasedMapsAndEncountersByContractTypeAndOwnership.Count > 0)
                                 {
                                     ModInit.modLog?.Info?.Write(
                                         $"[SGS_Rehydrate_Patch]: Found usable map with GetReleasedMapsAndEncountersByContractTypeAndOwnership, setting contract to {contract}.");
@@ -656,11 +651,13 @@ namespace SearchAndRescue
                                 {
                                     var contractOverride =
                                         __instance.DataManager.ContractOverrides.Get(contract).Copy();
+                                    MapRandomizer.ModState.AddContractBiomes = targetSystem.Def.SupportedBiomes;
+                                    MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                                     var releasedMapsAndEncountersByContractTypeAndOwnership =
                                         MetadataDatabase.Instance
                                             .GetReleasedMapsAndEncountersByContractTypeAndOwnership(
                                                 contractOverride.ContractTypeValue.ID, false);
-                                    if (releasedMapsAndEncountersByContractTypeAndOwnership?.Count > 0)
+                                    if (releasedMapsAndEncountersByContractTypeAndOwnership != null && releasedMapsAndEncountersByContractTypeAndOwnership.Count > 0)
                                     {
                                         ModInit.modLog?.Info?.Write(
                                             $"[SGS_Rehydrate_Patch]: Found usable map with GetReleasedMapsAndEncountersByContractTypeAndOwnership, setting contract to {contract}.");
@@ -676,11 +673,9 @@ namespace SearchAndRescue
                             }
                         }
 
-                        MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                         if (string.IsNullOrEmpty(contractName))
                         {
                             contractName = ModInit.modSettings.RecoveryContractIDs.GetRandomElement();
-                            MapRandomizer.ModState.IsSystemActionPatch = null;
                             ModInit.modLog?.Info?.Write(
                                 $"[SGS_Rehydrate_Patch]: Couldn't find biome appropriate map for any recovery contracts, disabling biome enforcement and picking a random contract because you don't read the documentation. This hurts you more than it hurts me.");
                         }
@@ -693,9 +688,10 @@ namespace SearchAndRescue
                             TargetSystem = missingPilot.Value.MissingPilotSystem,
                             IsGlobal = true
                         };
-                        var contractAdded = __instance.AddContract(contractData);
 
-                        MapRandomizer.ModState.IsSystemActionPatch = null;
+                        MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
+                        MapRandomizer.ModState.AddContractBiomes = targetSystem.Def.SupportedBiomes;
+                        var contractAdded = __instance.AddContract(contractData);
                         ModState.LostPilotsInfo[missingPilot.Value.MissingPilotDef.Description.Id]
                             .RecoveryContractGUID = contractAdded?.GUID;
                         ModInit.modLog?.Info?.Write(
@@ -705,6 +701,7 @@ namespace SearchAndRescue
                     }
                 }
                 MapRandomizer.ModState.AddContractBiomes = new List<Biome.BIOMESKIN>();
+                MapRandomizer.ModState.IsSystemActionPatch = null;
             }
         }
 

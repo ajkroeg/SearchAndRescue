@@ -47,7 +47,7 @@ namespace SearchAndRescue
                 var pilotSon = pilotDef.ToJSON();
                 var pilotTag = GlobalVars.SAR_PilotCompanyTagPrefix + pilotSon;
                 sim.CompanyTags.Add(pilotTag);
-                ModInit.modLog?.Trace?.Write($"[SerializeAllMissingPilots] - Added pilotTag {pilotTag} to company tags.");
+                ModInit.modLog?.Info?.Write($"[SerializeAllMissingPilots] - Added pilotTag {pilotTag} to company tags.");
             }
         }
 
@@ -57,7 +57,7 @@ namespace SearchAndRescue
             for (var i = sim.CompanyTags.Count - 1; i >= 0; i--)
             {
                 var tag = sim.CompanyTags[i];
-                ModInit.modLog?.Debug?.Write($"[DeSerializeMissingPilots] process companytag {tag}");
+                ModInit.modLog?.Info?.Write($"[DeSerializeMissingPilots] process companytag {tag}");
                 if (tag.StartsWith(GlobalVars.SAR_PilotCompanyTagPrefix))
                 {
                     var tagPilot = tag.Substring(GlobalVars.SAR_PilotCompanyTagPrefix.Length);
@@ -76,7 +76,7 @@ namespace SearchAndRescue
                     string opforTag = "";
                     string contractTag = "";
                     //Biome.BIOMESKIN biomeSkin = Biome.BIOMESKIN.UNDEFINED;
-                    ModInit.modLog?.Debug?.Write($"[DeSerializeMissingPilots] process missing pilot tag {pilotDef.Description.Callsign}");
+                    ModInit.modLog?.Info?.Write($"[DeSerializeMissingPilots] process missing pilot tag {pilotDef.Description.Callsign}");
                     var simUIDCount = 0;
                     var sysTagCount = 0;
                     //var biomeTagCount = 0;
