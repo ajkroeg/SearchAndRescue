@@ -1,5 +1,4 @@
 ﻿using BattleTech;
-using Harmony;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +11,6 @@ using SearchAndRescue.Framework;
 using UnityEngine.UI;
 using ModState = SearchAndRescue.Framework.ModState;
 using BattleTech.Data;
-using Steamworks;
 
 namespace SearchAndRescue
 {

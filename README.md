@@ -1,6 +1,7 @@
 # SearchAndRescue
 
 **Depends On IRBTModUtils and MapRandomizer!**
+**Versions 1.1.0.0 and higher requires modtek v3 or higher**
 
 This mod expands the consequences for the player's ejected pilots. On ejection, the unit makes a saving roll. On a success, the pilot is recovered normally. On failure, the pilot is listed as MIA and a Search And Rescue mission is added to the list of available contracts. This mod also enables the unused `usesExpiration` and `expirationTimeOverride` for ContractOverrides, and by default the SAR Missions will expire (disappear) after 14 days, and the missing pilot will be added to the death wall.
 

@@ -1,5 +1,4 @@
 ﻿using BattleTech;
-using Harmony;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -187,11 +186,17 @@ namespace SearchAndRescue.Patches
         public static class TaskTimelineWidget_AddEntry
         {
             static bool Prepare() => false; //fuckit
-            public static bool Prefix(TaskTimelineWidget __instance, WorkOrderEntry entry, bool sortEntries = true)
+            public static void Prefix(ref bool __runOriginal, TaskTimelineWidget __instance, WorkOrderEntry entry, bool sortEntries = true)
             {
-                if (__instance.ActiveItems.Keys.Any(x => x is Classes.WorkOrderEntry_Notification_Timed && x.ID == entry.ID))
-                    return false;
-                return true;
+                if (!__runOriginal) return;
+                if (__instance.ActiveItems.Keys.Any(x =>
+                        x is Classes.WorkOrderEntry_Notification_Timed && x.ID == entry.ID))
+                {
+                    __runOriginal = false;
+                    return;
+                }
+                __runOriginal = true;
+                return;
             }
         }
 
@@ -200,8 +205,9 @@ namespace SearchAndRescue.Patches
         {
             static bool Prepare() => false; //fuckit
 
-            public static bool Prefix(TaskTimelineWidget __instance)
+            public static void Prefix(ref bool __runOriginal, TaskTimelineWidget __instance)
             {
+                if (!__runOriginal) return;
                 foreach (WorkOrderEntry workOrderEntry in new List<WorkOrderEntry>(__instance.ActiveItems.Keys))
                 {
                     if (workOrderEntry is Classes.WorkOrderEntry_Notification_Timed) continue; //keep from removing
@@ -256,7 +262,8 @@ namespace SearchAndRescue.Patches
                     }
                 }
                 __instance.SortEntries();
-                return false;
+                __runOriginal = false;
+                return;
             }
         }
     }

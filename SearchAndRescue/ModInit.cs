@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Harmony;
 using IRBTModUtils.Logging;
 using Newtonsoft.Json;
-using SearchAndRescue.Framework;
 using Random = System.Random;
 
 namespace SearchAndRescue
@@ -39,9 +37,10 @@ namespace SearchAndRescue
             }
 
             ModInit.modLog?.Info?.Write($"Initializing Search And Rescue - Version {typeof(Settings).Assembly.GetName().Version}");
-            var harmony = HarmonyInstance.Create(HarmonyPackage);
+            //var harmony = HarmonyInstance.Create(HarmonyPackage);
             //FileLog.Log(HarmonyPackage);
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
+            //harmony.PatchAll(Assembly.GetExecutingAssembly());
+            Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), HarmonyPackage);
             //dump settings
             ModInit.modLog?.Info?.Write($"Settings dump: {settings}");
         }
