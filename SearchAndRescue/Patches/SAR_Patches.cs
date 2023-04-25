@@ -402,7 +402,6 @@ namespace SearchAndRescue
                                 }
                             }
                         }
-                        
                     }
                 }
             }
@@ -692,9 +691,19 @@ namespace SearchAndRescue
                         var contractAdded = __instance.AddContract(contractData);
                         ModState.LostPilotsInfo[missingPilot.Value.MissingPilotDef.Description.Id]
                             .RecoveryContractGUID = contractAdded?.GUID;
+                        for (var index = missingPilot.Value.MissingPilotDef.PilotTags.Count - 1; index >= 0; index--)
+                        {
+                            var tag = missingPilot.Value.MissingPilotDef.PilotTags[index];
+                            if (!tag.StartsWith(GlobalVars.SAR_ContractGUIDPrefix)) continue;
+                            missingPilot.Value.MissingPilotDef.PilotTags.Remove(tag);
+                            missingPilot.Value.MissingPilotDef.PilotTags.Add(
+                                $"{GlobalVars.SAR_ContractGUIDPrefix}{contractAdded.GUID}");
+                        }
+
                         ModInit.modLog?.Info?.Write(
                             $"[SGS_Rehydrate_Patch] - {missingPilot.Value.MissingPilotDef.Description.Callsign} MIA; Add contract with AddContractData: contractname:" +
                             $"{contractData.ContractName} employer: {contractData.Employer} target:{contractData.Target}, targetsystem:{contractData.TargetSystem}. Recovery contract GUID {contractAdded?.GUID}.");
+
                         addedContracts++;
                     }
                 }
