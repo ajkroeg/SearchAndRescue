@@ -48,6 +48,10 @@ namespace SearchAndRescue.Patches
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
                 var contractWidget = sim.RoomManager.CmdCenterRoom.contractsWidget;//Traverse.Create(sim.RoomManager.CmdCenterRoom).Field("contractsWidget").GetValue<SGContractsWidget>();
+                if (__instance.UsingExpiration)
+                {
+                    ModInit.modLog?.Info?.Write($"[Contract_OnDayPassed] - Contract {__instance?.Name} using expiration; {__instance.ExpirationTime} remaining.");
+                }
                 if (__result)
                 {
                     var toRemove = "";
