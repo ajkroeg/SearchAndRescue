@@ -161,6 +161,7 @@ namespace SearchAndRescue
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
                 if (ModState.CompleteContractRunOnce) return;
+                if (!ModState.LostPilotsInfo.Any()) return;
                 ModState.CompleteContractRunOnce = true;
                 //var biomes = new List<Biome.BIOMESKIN>();
                 var targetFaction =
@@ -197,7 +198,7 @@ namespace SearchAndRescue
 
                 foreach (UnitResult unitResult in __instance.PlayerUnitResults)
                 {
-                    if (ModState.LostPilotsInfo.ContainsKey(unitResult.pilot.Description.Id))
+                    if (ModState.LostPilotsInfo.TryGetValue(unitResult.pilot.Description.Id, out var value))
                     {
                         //biomes.Add(ModState.LostPilotsInfo[unitResult.pilot.pilotDef.Description.Id].PilotBiomeSkin);
                         string contractName = "";
@@ -273,7 +274,7 @@ namespace SearchAndRescue
                             //contractAdded.SetGuid(Guid.NewGuid().ToString());
                         }
 
-                        ModState.LostPilotsInfo[unitResult.pilot.Description.Id].RecoveryContractGUID =
+                        value.RecoveryContractGUID =
                             contractAdded?.GUID; // i think this wont work. may also need to make sure it puts contract in save bits? maybe not, maybe just patch addtravel
                         ModInit.modLog?.Info?.Write(
                             $"[Contract_CompleteContract] - {unitResult.pilot.Callsign} MIA; Add contract with AddContractData: contractname: {contractData.ContractName} employer: {contractData.Employer} target:{contractData.Target}, targetsystem:{contractData.TargetSystem}. Recovery contract GUID {contractAdded?.GUID}");
@@ -493,11 +494,12 @@ namespace SearchAndRescue
                 ModState.InitializeIcon();
                 __instance.InitializeMissionNames();
                 __instance.DeSerializeMissingPilots();
+                if (!ModState.LostPilotsInfo.Any()) return;
+                __instance.FullRehydrateAllContracts();
                 if (ModState.LostPilotsInfo.Values.Any(x => string.IsNullOrEmpty(x.RecoveryContractGUID)))
                 {
                     ModInit.modLog?.Info?.Write(
                         $"[SGS_Rehydrate_Patch] - Found LostPilotsInfos with null recovery contract GUID. Trying to nuke recovery contracts and regenerate");
-
                     if (__instance.GlobalContracts.Count == ModState.LostPilotsInfo.Count)
                     {
                         ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - LostPilotsInfos count equal to GlobalContracts count, can safely nuke all Global Contracts. I hope.");
@@ -512,7 +514,7 @@ namespace SearchAndRescue
                     {
                         for (int i = __instance.GlobalContracts.Count - 1; i >= 0; i--)
                         {
-                            __instance.GlobalContracts[i].Override.FullRehydrate();
+                            //__instance.GlobalContracts[i].Override.FullRehydrate();
                             if (ModState.ContractNames.Contains(__instance.GlobalContracts[i].Override.contractName) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.GlobalContracts[i].Override.ID))
                             {
                                 ModInit.modLog?.Info?.Write(
@@ -526,7 +528,7 @@ namespace SearchAndRescue
 
                     for (int i = __instance.CurSystem.SystemContracts.Count - 1; i >= 0; i--)
                     {
-                        __instance.CurSystem.SystemContracts[i].Override.FullRehydrate();
+                        //__instance.CurSystem.SystemContracts[i].Override.FullRehydrate();
                         if (ModState.ContractNames.Contains(__instance.CurSystem.SystemContracts[i].Override.contractName) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.CurSystem.SystemContracts[i].Override.ID))
                         {
                             ModInit.modLog?.Info?.Write(
@@ -554,6 +556,17 @@ namespace SearchAndRescue
                 var recoveryContractsSystem = __instance.CurSystem.SystemContracts.FindAll(x => ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID) || ModState.ContractNames.Contains(x.Override.contractName));
 
                 recoveryContractsGlobal.AddRange(recoveryContractsSystem);
+
+                if (__instance.ActiveTravelContract != null)
+                {
+                    __instance.ActiveTravelContract.Override.FullRehydrate();
+                    if (__instance.CurSystem.ID == __instance.ActiveTravelContract.TargetSystem &&
+                        (ModState.ContractNames.Contains(__instance.ActiveTravelContract.Override.contractName) ||
+                         ModInit.modSettings.RecoveryContractIDs.Contains(__instance.ActiveTravelContract.Override.ID)))
+                    {
+                        recoveryContractsGlobal.Add(__instance.ActiveTravelContract);
+                    }
+                }
 
                 if (recoveryContractsGlobal.Count >= ModState.LostPilotsInfo.Count)
                 {
@@ -709,6 +722,8 @@ namespace SearchAndRescue
                 }
                 MapRandomizer.ModState.AddContractBiomes = new List<Biome.BIOMESKIN>();
                 MapRandomizer.ModState.IsSystemActionPatch = null;
+
+                //do a final re-cleanup here?
             }
         }
 

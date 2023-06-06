@@ -14,7 +14,18 @@ namespace SearchAndRescue
 {
     public static class Utils
     {
-        
+        public static void FullRehydrateAllContracts(this SimGameState sim)
+        {
+            for (int i = 0; i < sim.GlobalContracts.Count; i++)
+            {
+                sim.GlobalContracts[i].Override.FullRehydrate();  
+            }
+            for (int i = 0; i < sim.CurSystem.SystemContracts.Count; i++)
+            {
+                sim.CurSystem.SystemContracts[i].Override.FullRehydrate();
+            }
+            sim.ActiveTravelContract?.Override?.FullRehydrate();
+        }
         public static void SerializeAllMissingPilots(this SimGameState sim)
         {
             //save pilot to...soomething.
