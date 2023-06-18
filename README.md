@@ -1,9 +1,10 @@
 # SearchAndRescue
 
 **Depends On IRBTModUtils and MapRandomizer!**
+**Versions 1.2.0.0 and higher requires MapRandomizer vv1.2.0.0 or higher**
 **Versions 1.1.0.0 and higher requires modtek v3 or higher**
 
-This mod expands the consequences for the player's ejected pilots. On ejection, the unit makes a saving roll. On a success, the pilot is recovered normally. On failure, the pilot is listed as MIA and a Search And Rescue mission is added to the list of available contracts. This mod also enables the unused `usesExpiration` and `expirationTimeOverride` for ContractOverrides, and by default the SAR Missions will expire (disappear) after 14 days, and the missing pilot will be added to the death wall.
+This mod expands the consequences for the player's ejected pilots. On ejection, the unit makes a saving roll. On a success, the pilot is recovered normally. On failure, the pilot is listed as MIA and a Search And Rescue mission is added to the list of available contracts. ~~This mod also enables the unused `usesExpiration` and `expirationTimeOverride` for ContractOverrides~~ [this functionality has been moved to MapRandomizer], and by default the SAR Missions will expire (disappear) after 14 days, and the missing pilot will be added to the death wall.
 
 mod.json settings follow:
 ```
@@ -14,7 +15,6 @@ mod.json settings follow:
 		"FriendlyTerritoryRecoveryMult": 1.2,
 		"InjureOnEjectChance": 0.5,
 		"InjureIgnoreBonusHealth": true,
-		"ContractTimeoutIcon": "time",
 		"AlwaysRecoverContractIDs": [],
 		"RecoveryContractIDs": [
 			"Rescue_SAR_IntelligenceAgent_Hard",
@@ -25,7 +25,7 @@ mod.json settings follow:
 ```
 `enableDebug` and `enableDebug` - bools, enable logging levels. recommend disable debug, leave trace enabled until sure no bugs remain.
 
-`BasePilotRecoveryChance` - float. baseline chance of recovering ejected pilot. further modified by AbstractActor statistic <float> `SAR_RecoveryChanceMult` and `FriendlyTerritoryRecoveryMult`
+`BasePilotRecoveryChance` - float. initialized as a company stat on career start or save load (if missing) which can then be modified by Argo Upgrades or events. further modified by AbstractActor statistic <float> `SAR_RecoveryChanceMult` and `FriendlyTerritoryRecoveryMult`
 
 `FriendlyTerritoryRecoveryMult` - float, multiplier on recovery chance if your employer is also the planet owner. For example, given above settings and unit `SAR_RecoveryChanceMult` set to 1.0, final recovery chance when employer is system owner would be 0.6: `BasePilotRecoveryChance 0.5 x FriendlyTerritoryRecoveryMult 1.2 x SAR_RecoveryChanceMult 1.0 = 0.6`
 
@@ -33,7 +33,7 @@ mod.json settings follow:
 
 `InjureIgnoreBonusHealth` - bool, if true, ejection injury "count" will be increased to compensate for BonusHealth (such as that added by reinforced cockpits)
 
-`ContractTimeoutIcon`: string, name of svg resource used for icon when contract has timeout
+~~`ContractTimeoutIcon`: string, name of svg resource used for icon when contract has timeout~~ moved to MapRandomizer mod
 
 `AlwaysRecoverContractIDs`: list of contract IDs or ContractTypes (i.e `DefendBase_AllQuiet_NEW` or `DefendBase`)
 

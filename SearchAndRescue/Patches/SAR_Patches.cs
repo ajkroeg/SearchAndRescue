@@ -356,14 +356,14 @@ namespace SearchAndRescue
                 //process loss here
                 foreach (UnitResult unitResult in __instance.CompletedContract.PlayerUnitResults)
                 {
-                    if (ModState.LostPilotsInfo.ContainsKey(unitResult.pilot.pilotDef.Description.Id))
+                    if (ModState.LostPilotsInfo.TryGetValue(unitResult.pilot.pilotDef.Description.Id, out var pilotInfo))
                     {
                         for (var index = __instance.PilotRoster.Count - 1; index >= 0; index--)
                         {
                             var simPilot = __instance.PilotRoster[index];
                             if (unitResult.pilot.pilotDef.Description.Id == simPilot.pilotDef.Description.Id)
                             {
-                                ModState.LostPilotsInfo[unitResult.pilot.pilotDef.Description.Id].PilotSimUID =
+                                pilotInfo.PilotSimUID =
                                     simPilot.GUID;
                                 ModInit.modLog?.Info?.Write(
                                     $"[SimGameState_ResolveCompleteContract]: updated {unitResult.pilot.pilotDef.Description.Id} LostPilotInfo SimUID with {simPilot.GUID}");
@@ -470,9 +470,13 @@ namespace SearchAndRescue
         {
             public static void Postfix(SGCharacterCreationCareerBackgroundSelectionPanel __instance)
             {
-                ModState.InitializeIcon();
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 sim.InitializeMissionNames();
+                if (!sim.CompanyStats.ContainsStatistic(Classes.RecoveryChanceStat))
+                {
+                    sim.CompanyStats.AddStatistic(Classes.RecoveryChanceStat,
+                        ModInit.modSettings.BasePilotRecoveryChance);
+                }
             }
         }
 
@@ -491,7 +495,11 @@ namespace SearchAndRescue
         {
             public static void Postfix(SimGameState __instance)
             {
-                ModState.InitializeIcon();
+                if (!__instance.CompanyStats.ContainsStatistic(Classes.RecoveryChanceStat))
+                {
+                    __instance.CompanyStats.AddStatistic(Classes.RecoveryChanceStat,
+                        ModInit.modSettings.BasePilotRecoveryChance);
+                }
                 __instance.InitializeMissionNames();
                 __instance.DeSerializeMissingPilots();
                 if (!ModState.LostPilotsInfo.Any()) return;

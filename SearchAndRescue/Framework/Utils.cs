@@ -221,7 +221,10 @@ namespace SearchAndRescue
         public static bool IsPilotRecovered(this AbstractActor actor, bool friendlyTerritory) // add higher weight and setting for employer owns planet (more likely to recover)
         {
             if (actor.GetPilot().IsPlayerCharacter) return true;
-            var chance = ModInit.modSettings.BasePilotRecoveryChance * actor.getSAR_RecoveryChanceMult() * (friendlyTerritory ? ModInit.modSettings.FriendlyTerritoryRecoveryMult : 1f);
+            var sim = UnityGameInstance.BattleTechGame.Simulation;
+            var baseChance = (sim != null) ? sim.CompanyStats.GetValue<float>(Classes.RecoveryChanceStat) : ModInit.modSettings.BasePilotRecoveryChance;
+            if (baseChance >= 0.99f) ModInit.modLog?.Info?.Write($"smell like bitch in here");
+            var chance = baseChance * actor.getSAR_RecoveryChanceMult() * (friendlyTerritory ? ModInit.modSettings.FriendlyTerritoryRecoveryMult : 1f);
             var roll = ModInit.Random.NextDouble();
             ModInit.modLog?.Info?.Write($"[IsPilotRecovered] - {actor.GetPilot().Callsign} Pilot recovery roll {roll} vs chance {chance}. Success? {roll <= chance}.");
             return roll <= chance;

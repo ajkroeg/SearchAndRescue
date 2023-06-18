@@ -28,13 +28,7 @@ namespace SearchAndRescue.Framework
 
         public static string NonProceduralContractGUID = "";
 
-        public static void InitializeIcon()
-        {
-            DataManager dm = UnityGameInstance.BattleTechGame.DataManager;
-            LoadRequest loadRequest = dm.CreateLoadRequest();
-            loadRequest.AddLoadRequest<SVGAsset>(BattleTechResourceType.SVGAsset, ModInit.modSettings.ContractTimeoutIcon, null);
-            loadRequest.ProcessRequests();
-        }
+        
 
         public static void InitializeMissionNames(this SimGameState sim)
         {

@@ -55,7 +55,6 @@ namespace SearchAndRescue
         public float InjureOnEjectChance = 0f;
         public bool InjureIgnoreBonusHealth = false;
         
-        public string ContractTimeoutIcon = "";
         public List<string> AlwaysRecoverContractIDs = new List<string>();
         public List<string> RecoveryContractIDs = new List<string>(); //should be rescue contracts.
     }
