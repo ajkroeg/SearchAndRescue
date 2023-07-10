@@ -2,6 +2,7 @@
 using BattleTech;
 using BattleTech.Data;
 using BattleTech.Framework;
+using MapRandomizer.source;
 using SVGImporter;
 using static SearchAndRescue.Framework.Classes;
 
@@ -48,7 +49,7 @@ namespace SearchAndRescue.Framework
                     contractOverride.FullRehydrate();
                     ModState.ContractNames.Add(contractOverride.contractName);
                     ModInit.modLog?.Info?.Write(
-                        $"[InitializeMissionNames] - Added {contractOverride.contractName} for ID {contractOverride.ID}");
+                        $"[InitializeMissionNames] - Added {contractOverride.contractName} for ID {contractOverride.FetchCachedOverrideID()}");
                 }
             }
         }

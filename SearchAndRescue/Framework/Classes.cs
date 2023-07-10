@@ -3,6 +3,7 @@ using System.Linq;
 using BattleTech;
 using BattleTech.Data;
 using BattleTech.Framework;
+using MapRandomizer.source;
 
 namespace SearchAndRescue.Framework
 {
@@ -89,7 +90,7 @@ namespace SearchAndRescue.Framework
                     var filtered = new List<ContractOverride>();
                     foreach (var contractOverride in type.Value)
                     {
-                        if (ModInit.modSettings.RecoveryContractIDs.Contains(contractOverride.ID) || ModState.ContractNames.Contains(contractOverride.contractName))
+                        if (ModInit.modSettings.RecoveryContractIDs.Contains(contractOverride.FetchCachedOverrideID()) || ModState.ContractNames.Contains(contractOverride.contractName))
                         {
                             filtered.Add(contractOverride);
                         }

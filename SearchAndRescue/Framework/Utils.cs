@@ -6,25 +6,27 @@ using BattleTech.Data;
 using BattleTech.Framework;
 using BattleTech.Portraits;
 using BattleTech.UI;
+using MapRandomizer.source;
 using SearchAndRescue.Framework;
 using UnityEngine;
+using Classes = SearchAndRescue.Framework.Classes;
 using ModState = SearchAndRescue.Framework.ModState;
 
 namespace SearchAndRescue
 {
     public static class Utils
     {
-        public static void FullRehydrateAllContracts(this SimGameState sim)
+        public static void RehydrateIDAllContracts(this SimGameState sim)
         {
             for (int i = 0; i < sim.GlobalContracts.Count; i++)
             {
-                sim.GlobalContracts[i].Override.FullRehydrate();  
+                sim.GlobalContracts[i].Override.FetchCachedOverrideID();  
             }
             for (int i = 0; i < sim.CurSystem.SystemContracts.Count; i++)
             {
-                sim.CurSystem.SystemContracts[i].Override.FullRehydrate();
+                sim.CurSystem.SystemContracts[i].Override.FetchCachedOverrideID();
             }
-            sim.ActiveTravelContract?.Override?.FullRehydrate();
+            sim.ActiveTravelContract?.Override?.FetchCachedOverrideID();
         }
         public static void SerializeAllMissingPilots(this SimGameState sim)
         {
@@ -221,8 +223,11 @@ namespace SearchAndRescue
         public static bool IsPilotRecovered(this AbstractActor actor, bool friendlyTerritory) // add higher weight and setting for employer owns planet (more likely to recover)
         {
             if (actor.GetPilot().IsPlayerCharacter) return true;
+
+            var debugHK = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
             var sim = UnityGameInstance.BattleTechGame.Simulation;
             var baseChance = (sim != null) ? sim.CompanyStats.GetValue<float>(Classes.RecoveryChanceStat) : ModInit.modSettings.BasePilotRecoveryChance;
+            if (debugHK) baseChance = ModInit.modSettings.BasePilotRecoveryChance;
             if (baseChance >= 0.99f) ModInit.modLog?.Info?.Write($"smell like bitch in here");
             var chance = baseChance * actor.getSAR_RecoveryChanceMult() * (friendlyTerritory ? ModInit.modSettings.FriendlyTerritoryRecoveryMult : 1f);
             var roll = ModInit.Random.NextDouble();

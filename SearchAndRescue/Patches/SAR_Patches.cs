@@ -11,6 +11,9 @@ using SearchAndRescue.Framework;
 using UnityEngine.UI;
 using ModState = SearchAndRescue.Framework.ModState;
 using BattleTech.Data;
+using MapRandomizer.source;
+using Classes = SearchAndRescue.Framework.Classes;
+using UnityEngine;
 
 namespace SearchAndRescue
 {
@@ -33,8 +36,9 @@ namespace SearchAndRescue
             {
                 var sim = UnityGameInstance.BattleTechGame.Simulation;
                 if (sim == null) return;
-                if (ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract.Override
-                        .ID) || ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract
+
+                    if (ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract.Override
+                        .FetchCachedOverrideID()) || ModInit.modSettings.AlwaysRecoverContractIDs.Contains(__instance.Combat.ActiveContract
                         .Override.ContractTypeValue.Name)) return;
 
                 if (__instance.GetPilot().IsPlayerCharacter || sim.PilotRoster.Any(x =>
@@ -126,10 +130,10 @@ namespace SearchAndRescue
             {
                 if (__instance == null) return;
                 if (__instance.Override == null) return;
-                __instance?.Override.FullRehydrate();
+                var overrideID = __instance?.Override.FetchCachedOverrideID();
                 if (__instance.Name == null) return;
-                if (ModState.ContractNames.Contains(__instance.Name) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.Override.ID))
-                    ModInit.modLog?.Info?.Write($"[Contract_GUID_Getter] getter for {__instance?.Name} {__instance?.Override?.ID} got {__result}. Called by {Environment.StackTrace.ToString()}");
+                if (ModState.ContractNames.Contains(__instance.Name) || ModInit.modSettings.RecoveryContractIDs.Contains(overrideID))
+                    ModInit.modLog?.Info?.Write($"[Contract_GUID_Getter] getter for {__instance?.Name} {overrideID} got {__result}. Called by {Environment.StackTrace.ToString()}");
             }
         }
 
@@ -142,10 +146,10 @@ namespace SearchAndRescue
             {
                 if (__instance == null) return;
                 if (__instance.Override == null) return;
-                __instance?.Override.FullRehydrate();
+                var overrideID = __instance?.Override.FetchCachedOverrideID();
                 if (__instance.Name == null) return;
-                if (ModState.ContractNames.Contains(__instance.Name) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.Override.ID))
-                    ModInit.modLog?.Info?.Write($"[Contract_GUID_Setter] Setter for {__instance?.Name} {__instance?.Override?.ID} set {value}. Called by {Environment.StackTrace.ToString()}");
+                if (ModState.ContractNames.Contains(__instance.Name) || ModInit.modSettings.RecoveryContractIDs.Contains(overrideID))
+                    ModInit.modLog?.Info?.Write($"[Contract_GUID_Setter] Setter for {__instance?.Name} {overrideID} set {value}. Called by {Environment.StackTrace.ToString()}");
             }
         }
 
@@ -292,8 +296,8 @@ namespace SearchAndRescue
             {
                 ModInit.modLog?.Trace?.Write($"[SimGameState_ResolveCompleteContract] enter SimGameState_ResolveCompleteContract");
                 //process recovery here
-                __instance.CompletedContract.Override.FullRehydrate();
-                if (ModInit.modSettings.RecoveryContractIDs.Contains(__instance.CompletedContract.Override.ID) || ModState.ContractNames.Contains(__instance.CompletedContract.Override.contractName))
+                var overrideID = __instance.CompletedContract.Override.FetchCachedOverrideID();
+                if (ModInit.modSettings.RecoveryContractIDs.Contains(overrideID) || ModState.ContractNames.Contains(__instance.CompletedContract.Override.contractName))
                 {
                     ModInit.modLog?.Info?.Write($"[SimGameState_ResolveCompleteContract] found matching ID or Name for SAR contract");
                     var toRemove = new List<string>();
@@ -503,7 +507,7 @@ namespace SearchAndRescue
                 __instance.InitializeMissionNames();
                 __instance.DeSerializeMissingPilots();
                 if (!ModState.LostPilotsInfo.Any()) return;
-                __instance.FullRehydrateAllContracts();
+                //__instance.RehydrateIDAllContracts();
                 if (ModState.LostPilotsInfo.Values.Any(x => string.IsNullOrEmpty(x.RecoveryContractGUID)))
                 {
                     ModInit.modLog?.Info?.Write(
@@ -513,8 +517,9 @@ namespace SearchAndRescue
                         ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - LostPilotsInfos count equal to GlobalContracts count, can safely nuke all Global Contracts. I hope.");
                         for (int i = __instance.GlobalContracts.Count - 1; i >= 0; i--)
                         {
+                            var overrideID = __instance.GlobalContracts[i].Override.FetchCachedOverrideID();
                             ModInit.modLog?.Info?.Write(
-                                $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {__instance.GlobalContracts[i].Override.ID} and GUID {__instance.GlobalContracts[i].GUID}");
+                                $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {overrideID} and GUID {__instance.GlobalContracts[i].GUID}");
                             __instance.GlobalContracts.RemoveAt(i);
                         }
                     }
@@ -522,13 +527,14 @@ namespace SearchAndRescue
                     {
                         for (int i = __instance.GlobalContracts.Count - 1; i >= 0; i--)
                         {
-                            //__instance.GlobalContracts[i].Override.FullRehydrate();
-                            if (ModState.ContractNames.Contains(__instance.GlobalContracts[i].Override.contractName) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.GlobalContracts[i].Override.ID))
+                            var overrideID = __instance.GlobalContracts[i].Override.FetchCachedOverrideID();
+                            //__instance.GlobalContracts[i].Override.RehydrateOverrideID();
+                            if (ModState.ContractNames.Contains(__instance.GlobalContracts[i].Override.contractName) || ModInit.modSettings.RecoveryContractIDs.Contains(overrideID))
                             {
                                 ModInit.modLog?.Info?.Write(
-                                    $"[SGS_Rehydrate_Patch] - Checking GlobalContract {__instance.GlobalContracts[i].OverrideID} against SAR contract list");
+                                    $"[SGS_Rehydrate_Patch] - Checking GlobalContract {overrideID} against SAR contract list");
                                 ModInit.modLog?.Info?.Write(
-                                    $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {__instance.GlobalContracts[i].Override.ID} and GUID {__instance.GlobalContracts[i].GUID}");
+                                    $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {overrideID} and GUID {__instance.GlobalContracts[i].GUID}");
                                 __instance.GlobalContracts.RemoveAt(i);
                             }
                         }
@@ -536,22 +542,23 @@ namespace SearchAndRescue
 
                     for (int i = __instance.CurSystem.SystemContracts.Count - 1; i >= 0; i--)
                     {
-                        //__instance.CurSystem.SystemContracts[i].Override.FullRehydrate();
-                        if (ModState.ContractNames.Contains(__instance.CurSystem.SystemContracts[i].Override.contractName) || ModInit.modSettings.RecoveryContractIDs.Contains(__instance.CurSystem.SystemContracts[i].Override.ID))
+                        var overrideID = __instance.CurSystem.SystemContracts[i].Override.FetchCachedOverrideID();
+                        //__instance.CurSystem.SystemContracts[i].Override.RehydrateOverrideID();
+                        if (ModState.ContractNames.Contains(__instance.CurSystem.SystemContracts[i].Override.contractName) || ModInit.modSettings.RecoveryContractIDs.Contains(overrideID))
                         {
                             ModInit.modLog?.Info?.Write(
-                                $"[SGS_Rehydrate_Patch] - Checking system contract {__instance.CurSystem.SystemContracts[i].OverrideID} against SAR contract list");
+                                $"[SGS_Rehydrate_Patch] - Checking system contract {overrideID} against SAR contract list");
                             ModInit.modLog?.Info?.Write(
-                                $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {__instance.CurSystem.SystemContracts[i].Override.ID} and GUID {__instance.CurSystem.SystemContracts[i].GUID}");
+                                $"[SGS_Rehydrate_Patch] - NUKED FOR REGEN: Removed old recovery contract with id {overrideID} and GUID {__instance.CurSystem.SystemContracts[i].GUID}");
                             __instance.CurSystem.SystemContracts.RemoveAt(i);
                         }
                     }
 
                     if (__instance.ActiveTravelContract != null)
                     {
-                        __instance.ActiveTravelContract.Override.FullRehydrate();
+                        var overrideID = __instance.ActiveTravelContract.Override.FetchCachedOverrideID();
                         if (__instance.CurSystem.ID == __instance.ActiveTravelContract.TargetSystem && (ModState.ContractNames.Contains(__instance.ActiveTravelContract.Override.contractName) ||
-                                ModInit.modSettings.RecoveryContractIDs.Contains(__instance.ActiveTravelContract.Override.ID)))
+                                ModInit.modSettings.RecoveryContractIDs.Contains(overrideID)))
                         {
                             __instance.ClearBreadcrumb();
                             ModInit.modLog?.Info?.Write($"[SGS_Rehydrate_Patch] - Active travel contract was SAR in current system, clearing it");
@@ -559,18 +566,18 @@ namespace SearchAndRescue
                     }
                 }
                 var recoveryContractsGlobal = __instance.GlobalContracts.FindAll(x =>
-                    ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID) || ModState.ContractNames.Contains(x.Override.contractName));
+                    ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.FetchCachedOverrideID()) || ModState.ContractNames.Contains(x.Override.contractName));
 
-                var recoveryContractsSystem = __instance.CurSystem.SystemContracts.FindAll(x => ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.ID) || ModState.ContractNames.Contains(x.Override.contractName));
+                var recoveryContractsSystem = __instance.CurSystem.SystemContracts.FindAll(x => ModInit.modSettings.RecoveryContractIDs.Contains(x.Override.FetchCachedOverrideID()) || ModState.ContractNames.Contains(x.Override.contractName));
 
                 recoveryContractsGlobal.AddRange(recoveryContractsSystem);
 
                 if (__instance.ActiveTravelContract != null)
                 {
-                    __instance.ActiveTravelContract.Override.FullRehydrate();
+                    var overrideID = __instance.ActiveTravelContract.Override.FetchCachedOverrideID();
                     if (__instance.CurSystem.ID == __instance.ActiveTravelContract.TargetSystem &&
                         (ModState.ContractNames.Contains(__instance.ActiveTravelContract.Override.contractName) ||
-                         ModInit.modSettings.RecoveryContractIDs.Contains(__instance.ActiveTravelContract.Override.ID)))
+                         ModInit.modSettings.RecoveryContractIDs.Contains(overrideID)))
                     {
                         recoveryContractsGlobal.Add(__instance.ActiveTravelContract);
                     }
@@ -732,21 +739,6 @@ namespace SearchAndRescue
                 MapRandomizer.ModState.IsSystemActionPatch = null;
 
                 //do a final re-cleanup here?
-            }
-        }
-
-        [HarmonyPatch(typeof(ContractOverride), "CopyContractTypeData", new Type[] {typeof(ContractOverride)})]
-        public static class ContractOverride_CopyContractTypeData
-        {
-            static bool Prepare() => false; //disable; just need to rehyrate overrides when checking
-            public static void Postfix(ContractOverride __instance, ContractOverride ovr)
-            {
-                if (ovr != null && ModInit.modSettings.RecoveryContractIDs.Contains(ovr.ID))
-                {
-                    __instance.ID = ovr.ID;
-                    ModInit.modLog?.Info?.Write(
-                        $"[ContractOverride_CopyContractTypeData]: Copied missing Override ID: Instance ID is now {__instance.ID}, source override ID is {ovr.ID}.");
-                }
             }
         }
     }
