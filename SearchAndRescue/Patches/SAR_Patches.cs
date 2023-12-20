@@ -70,6 +70,15 @@ namespace SearchAndRescue
                             __instance.Combat.ActiveContract.GetTeamFaction("be77cadd-e245-4240-a93e-b99cc98902a5");
                         var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, __instance.GetPilot().GUID,
                             sim.CurSystem.ID, targetFaction.Name, true);
+
+                        if (ModInit.modSettings.FactionOverrideMap.TryGetValue(targetFaction.Name,
+                                out var targetFactionName))
+                        {
+                            missingPilotInfo.SAR_Opfor = targetFactionName;
+                            ModInit.modLog?.Info?.Write(
+                                $"[AbstractActor_EjectPilot]: Found {targetFaction.Name} in FactionOverrideMap, overriden to {missingPilotInfo.SAR_Opfor}.");
+                        }
+
                         ModState.LostPilotsInfo.Add(pilotDef.Description.Id, missingPilotInfo);
                     }
                 }
@@ -262,6 +271,7 @@ namespace SearchAndRescue
                                 $"[Contract_CompleteContract]: Couldn't find biome appropriate map for any recovery contracts, disabling biome enforcement and picking a random contract because you don't read the documentation. This hurts you more than it hurts me.");
                         }
 
+                        
                         var contractData = new SimGameState.AddContractData
                         {
                             ContractName = contractName,
@@ -270,6 +280,13 @@ namespace SearchAndRescue
                             TargetSystem = sim.CurSystem.ID,
                             IsGlobal = true
                         };
+                        if (ModInit.modSettings.FactionOverrideMap.TryGetValue(targetFaction.Name,
+                                out var targetFactionName))
+                        {
+                            contractData.Target = targetFactionName;
+                            ModInit.modLog?.Info?.Write(
+                                $"[Contract_CompleteContract]: Found {targetFaction.Name} in FactionOverrideMap, overriden to {contractData.Target}.");
+                        }
                         MapRandomizer.ModState.AddContractBiomes = sim.CurSystem.Def.SupportedBiomes;
                         MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                         var contractAdded = sim.AddContract(contractData);
@@ -713,7 +730,13 @@ namespace SearchAndRescue
                             TargetSystem = missingPilot.Value.MissingPilotSystem,
                             IsGlobal = true
                         };
-
+                        if (ModInit.modSettings.FactionOverrideMap.TryGetValue(missingPilot.Value.SAR_Opfor,
+                                out var targetFactionName))
+                        {
+                            contractData.Target = targetFactionName;
+                            ModInit.modLog?.Info?.Write(
+                                $"[SGS_Rehydrate_Patch]: Found {missingPilot.Value.SAR_Opfor} in FactionOverrideMap, overriden to {contractData.Target}.");
+                        }
                         MapRandomizer.ModState.IsSystemActionPatch = "ACTIVE";
                         MapRandomizer.ModState.AddContractBiomes = targetSystem.Def.SupportedBiomes;
                         var contractAdded = __instance.AddContract(contractData);

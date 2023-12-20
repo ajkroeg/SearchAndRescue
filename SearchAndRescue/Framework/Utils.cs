@@ -5,6 +5,7 @@ using BattleTech;
 using BattleTech.Data;
 using BattleTech.Framework;
 using BattleTech.Portraits;
+using BattleTech.Save;
 using BattleTech.UI;
 using MapRandomizer.source;
 using SearchAndRescue.Framework;
@@ -185,7 +186,20 @@ namespace SearchAndRescue
                         systemTag = sim.CurSystem.SystemID;
                         ModInit.modLog?.Error?.Write($"[DeSerializeMissingPilots] - *Somehow* pilot system tag became not a starsystem. Changing to current system I guess.");
                     }
+
+                    if (ModInit.modSettings.FactionOverrideMap.TryGetValue(opforTag,
+                            out var targetFactionName))
+                    {
+                       
+                        ModInit.modLog?.Info?.Write(
+                            $"[DeSerializeMissingPilots]: Found {opforTag} in FactionOverrideMap, overriden to {targetFactionName}.");
+                        opforTag = targetFactionName;
+                        ModInit.modLog?.Info?.Write(
+                            $"[DeSerializeMissingPilots]: opforTag  not {opforTag}.");
+                    }
+
                     var missingPilotInfo = new Classes.MissingPilotInfo(pilotDef, simUID, systemTag, opforTag, false);
+
                     if (ModState.LostPilotsInfo.ContainsKey(pilotDef.Description.Id))
                     {
                         //if (ModState.LostPilotsInfo[pilotDef.Description.Id].PilotBiomeSkin ==

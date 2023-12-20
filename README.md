@@ -20,7 +20,10 @@ mod.json settings follow:
 			"Rescue_SAR_IntelligenceAgent_Hard",
 			"Rescue_SAR_IntelligenceAgent_Med",
 			"Rescue_SAR_AssetRetrieval_Easy"
-		]
+		],
+		"FactionOverrideMap": {
+			"Locals": "ClanGhostBear"
+		}
 	},
 ```
 `enableDebug` and `enableDebug` - bools, enable logging levels. recommend disable debug, leave trace enabled until sure no bugs remain.
@@ -38,6 +41,8 @@ mod.json settings follow:
 `AlwaysRecoverContractIDs`: list of contract IDs or ContractTypes (i.e `DefendBase_AllQuiet_NEW` or `DefendBase`)
 
 `RecoveryContractIDs`: list of contract IDs which will be used for pilot rescue contracts. recommend having at least one for each "difficulty" tier. In addition, I highly recommend you include at least one contract of a type that has a valid map for every biome as a "fallback" of sorts. Recovery and SimpleBattle are good candidates.
+
+`FactionOverrideMap`: Dictionary of string:string pairs. If a  pilot ejects and is not recovered versus the KEY faction, the resulting rescue mission will be against the matching VALUE faction. For example, in the above settings, a pilot ejected and not recovered while facing the Locals will have a rescue mission vs ClanGhostBear.
 
 ### So how does it work?
 

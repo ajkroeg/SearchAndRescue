@@ -57,5 +57,7 @@ namespace SearchAndRescue
         
         public List<string> AlwaysRecoverContractIDs = new List<string>();
         public List<string> RecoveryContractIDs = new List<string>(); //should be rescue contracts.
+
+        public Dictionary<string, string> FactionOverrideMap = new Dictionary<string, string>();
     }
 }
