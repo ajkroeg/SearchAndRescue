@@ -17,6 +17,7 @@ namespace SearchAndRescue
 {
     public static class Utils
     {
+        private const string RoninKilledStatName = "MaRoninKilled";
         public static void RehydrateIDAllContracts(this SimGameState sim)
         {
             for (int i = 0; i < sim.GlobalContracts.Count; i++)
@@ -345,6 +346,14 @@ namespace SearchAndRescue
                 pilotDef.SetDayOfDeath(sim.daysPassed);
                 pilotDef.SetRecentInjuryDamageType(DamageType.Unknown);
                 pilotDef.SetDiedInSystemID(lostPilotInfo.MissingPilotSystem);
+
+                // Inform MechAffinity of the Ronin killed if it's present
+                if (pilotDef.IsRonin && sim.companyStats.ContainsStatistic(RoninKilledStatName))
+                {
+                    var roninKilled = sim.companyStats.GetValue<int>(RoninKilledStatName);
+                    roninKilled++;
+                    sim.companyStats.Set(RoninKilledStatName, roninKilled);
+                }
                 
             }
             sim.Graveyard.Add(p, 0);
